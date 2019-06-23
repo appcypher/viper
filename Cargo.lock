@@ -3,4 +3,21 @@
 [[package]]
 name = "viper"
 version = "0.0.1"
+dependencies = [
+ "viper-codegen 0.0.1",
+ "viper-lexer 0.0.1",
+ "viper-parser 0.0.1",
+]
+
+[[package]]
+name = "viper-codegen"
+version = "0.0.1"
+
+[[package]]
+name = "viper-lexer"
+version = "0.0.1"
+
+[[package]]
+name = "viper-parser"
+version = "0.0.1"
 

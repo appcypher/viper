@@ -5,3 +5,6 @@ authors = ["Steve Akinyemi <appcypher@outlook.com>"]
 edition = "2018"
 
 [dependencies]
+viper-lexer = { path = "compiler/lexer" }
+viper-parser = { path = "compiler/parser" }
+viper-codegen = { path = "compiler/codegen" }
