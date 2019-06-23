@@ -7,4 +7,15 @@
 
 <h1 align="center">VIPER</h1>
 
-<h4 align="center">...</h4>
+
+#### Introduction
+A Python compiler that supports Python 3.7 syntax. Viper will support two (2) modes of compilation. Each with varying levels of compatibility with CPython.
+
+- Strict Mode
+
+    This mode is makes compatibility tradeoffs but delivers a better performance using static analysis techniques like type inference and lifetime analysis. Performance improves further when types are provided.
+
+- Dynamic Mode
+
+    This (also compatibility mode) is expected to be compatible with CPython, therefore it does not necessarily give any performance benefits. However, providing type annotations should result in better performance.
+
