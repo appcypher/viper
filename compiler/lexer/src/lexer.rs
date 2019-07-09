@@ -3,7 +3,7 @@ use crate::LexerError;
 type LexerResult<T> = Result<T, LexerError>;
 
 
-// Chracters supported by the lexer.
+// Characters supported by the lexer.
 #[derive(Debug)]
 pub struct Chars {
 }
