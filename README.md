@@ -8,42 +8,28 @@
 <h1 align="center">VIPER</h1>
 
 
-#### Introduction
-A Python compiler that supports Python 3.7+ syntax. Viper will support two (2) modes of compilation. Each with varying levels of compatibility with CPython.
+## Introduction
+Viper is a compiler that compiles a restricted subset of Python to WebAssembly. Viper only supports Python3 syntax.
 
-- Strict Mode
+A possible long-term goal is to provide an option to compile dynamic CPython-compatible code, which is totally dependent on how well the idea is recieved.
 
-    This mode is makes compatibility tradeoffs but delivers a better performance using static analysis techniques like type inference and lifetime analysis. Dynamic semantics are not allowed in strict mode.
 
-- Dynamic Mode
+## How does this differ from RPython, Nuitka or MicroPython
+MicroPython is a well-optimized Python interpreter (with some JIT support) while Nuitka compiles Python to C. These two projects still allow dynamic aspects of Python, which means their performances will typically not reach the level of statically-typed languages.
 
-    Dynamic mode (also called compatibility mode) is expected to be mostly compatible (not bytecode-compatible) with CPython, therefore it does not necessarily give any performance benefits. On the other hand, providing type annotations should result in better performance.
+RPython, on the other hand, is similar to this project, but the developers have [made it clear](https://rpython.readthedocs.io/en/latest/faq.html#do-i-have-to-rewrite-my-programs-in-rpython) several times their goal is not to make RPython a standalone language.
 
-#### Modes
-- Strict Mode
+
+## Non-goals
+Total semantic compatibility with CPython isn't a goal. For example, viper represents `int`s as 64-bit integers.
+
+
+## Possible CLI
+```sh
+viper sample.vy
+```
 
 ```sh
 viper sample.py
 ```
 
-- Dynamic Mode
-
-```sh
-viper sample.py --enable-dynamic-mode
-```
-
-
-#### Non-goals
-- While this project aims to be compatible with the Python 3.7+ source code, it will not be compatible with CPython's bytecode. As a result, it won't work as expected with packages that rely bytecode introspections. A  notble example is the PonyORM package.
-
-
-#### Issues
-- Python code with eval.
-
-```
-stdlib.wasm (host env = wasabi | wasi)
-compiler.wasm (export func compile(string) -> wasm)
-eval.wasm (import ... from stdlib.wasm and compiler.wasm)
-
-viper compiles all into single wasm binary.
-```
