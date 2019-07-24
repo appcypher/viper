@@ -523,31 +523,52 @@ def foo():
        print(i)
 ```
 
-1. *Final Functions*
+1. _Automatic Reference Counting_
+
+    Automatic Reference Counting with the ability to detect and break reference cycles.
+
+    ```py
+    parent = Parent()
+
+    """
+    parent = 1
+    """
+
+    child = Child()
+
+    """
+    parent = 1
+    child = 1
+    """
+
+    parent.child = child
+
+    """
+    parent = 1
+    child = 2
+    """
+
+    child.parent = parent
+
+    """
+    parent = 2
+    child = 2
+
+
+    parent decrements child refs to 1
+    child decrements parent refs to 1
+
+    caveat:
+    - both are still not destroyed
+    - recursive avalanche of children refs decrementing
+    """
+    ```
+
+2. _Final Functions_
 
     Came up with a new deallocation strategy on August 4, 2018. This deallocation scheme relies on final functions _(will be explained below)_. With final functions, all that is needed is a metadata on each heap object specifying whether it can be freed or not. A function containing the entire lifetime of an object can then specify whether such object can be freed by an inner final/non-final function call.
 
     A final function is a function that doesn't pass its argument to another function call nor return it.
-
-    <!-- Scope Reference Tracking
-
-    ```py
-    def qux(x): Final
-        foo(x)
-        foo(x)
-        bar(x)
-
-    def bar(x): Final
-        foo(x)
-        next_final_function_should_free(x)
-        foo(x)
-
-    def foo(x): Final
-        x
-        free(x)
-    ``` -->
-
-    Asynchronous Scope Reference Tracking
 
     ```py
     def qux(x):
