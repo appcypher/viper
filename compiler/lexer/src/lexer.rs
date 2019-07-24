@@ -2,11 +2,9 @@ use crate::LexerError;
 
 type LexerResult<T> = Result<T, LexerError>;
 
-
 // Characters supported by the lexer.
 #[derive(Debug)]
-pub struct Chars {
-}
+pub struct Chars {}
 
 impl Chars {
     // Creates a new Chars object.
@@ -14,7 +12,6 @@ impl Chars {
         Chars {}
     }
 }
-
 
 // The lexer structure.
 #[derive(Debug)]
@@ -35,13 +32,27 @@ pub struct Token {
     column: usize,
 }
 
+impl Token {
+    pub fn new(string: String, row: usize, column: usize) -> Self {
+        Self {
+            string,
+            row,
+            column,
+        }
+    }
+}
+
 impl Lexer {
     // Creates a new Lexer object.
     pub fn new(code: String) -> Self {
         Self {
             code: code.chars().collect(),
             cursor: 0,
-            row: 0, column: 0, indentation: 0, allowed_chars: Chars::new() }
+            row: 0,
+            column: 0,
+            indentation: 0,
+            allowed_chars: Chars::new(),
+        }
     }
 
     // Eats a character if available.
@@ -65,13 +76,35 @@ impl Lexer {
 
         // Iteratively associates each token.
         loop {
-            match ch {
-                // ...
-                _ => break,
+            let Self { row, column, .. } = self;
+            // let mut token: LexerResult<Token>;
+
+            // identifier, digits, spaces (in/dedentations),
+            if let Some(ch) = ch {
+                let token = match ch {
+                    'a' => self.lex_identifier(),
+                    _ => {
+                        return Err(LexerError::new(
+                            format!("Unexpected token: '{}'!", ch),
+                            *row,
+                            *column,
+                        ))
+                    }
+                };
+            } else {
+                return Err(LexerError::new(
+                    format!("Unexpected token: '{}'!", ch.unwrap()),
+                    *row,
+                    *column,
+                ));
             }
         }
 
         Ok(tokens)
     }
-}
 
+    //
+    pub fn lex_identifier(&mut self) -> LexerResult<Token> {
+        Ok(Token::new(String::new(), self.row, self.column))
+    }
+}
