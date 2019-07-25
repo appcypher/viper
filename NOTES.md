@@ -111,7 +111,7 @@ Viper parser is a PEG packrat parser.
 
         A local variable can be shadowed. In the above example, the second `num` is a totally different variable from the first `num`.
 
-        Global variables cannot be shadowed.
+        Global variables and fields cannot be shadowed.
 
 
 - Fields
@@ -375,7 +375,7 @@ Viper parser is a PEG packrat parser.
 
 - Variable
 
-    - Shadowing a global variable, class variable or variable referenced in a closure.
+    - Shadowing a global variable or a field.
         ```py
         num = 10
         print(num)
@@ -399,7 +399,12 @@ Viper parser is a PEG packrat parser.
 
         #### IMPLEMENTATION
 
-        The types of global variables, class variables and variables referenced in closures are determined at declaration point and cannot change so they can't be shadowed.
+        The types of global variables, fields are determined at declaration point and cannot change so they can't be shadowed. The reason this isn't allowed is because it can lead to unintuitive behaviors and is hard to optimize.
+        
+        The full list of variable types that cannot be shadowed
+        - global variables
+        - instance and class fields
+        - variables from outer scope referenced in a closure
 
 
 - Integers
