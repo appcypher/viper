@@ -2,19 +2,45 @@
 ## LEXER
 
 ## PARSER
-##### PACKRAT PARSER
+
+Viper parser is a PEG packrat parser.
+
 - Results of all paths that are taken are memoized.
 - A parse function result should always be an AST. Avoid returning a parse tree.
 - A parse function result should not hold values, but references to token elements.
 
 ## SEMANTIC ANALYSIS
 
+- Philosophy
 
-## STATIC ANALYSIS
+    Viper has certain world-views that make the semantic analysis phase easier to understand and implement.
+
+    - Every function, method and operator is seen as a normal function.
+    - Every object has a structure and classes are how we describe or classify those structures. We only think in terms of classes when an object's structure is a subset of a class's structure.
+    - Inheritance / variance is an abstraction we only care about for validation purposes. Relationship between objects are only seen in terms of how similar their structure is.
+
 - Analysis artifacts
-    - Reference graphs
-    - Type instantiations
-    - Function instantiations
+
+    - Scope tree
+
+        - Object end-of-lifetime list
+
+            Each scope contain a list of objects end-of-lifetime.
+            Reference is followed only in the object's declaration scope and each object's end-of-lifetime point is adjusted as new references to it are encountered.
+
+        - Type frames
+
+            A type frame is created for each function.
+            This type frame holds information about the type flow in the function's scope.
+            To instantiate a type frame, we need to validate that the types used in the scope truly have an associated function instantiation.
+
+        - Type mro lists (C3 linearization)
+
+        - Type instantiations
+
+        - Function instantiations
+
+            Viper sees all operators and methods as functions. There is no difference at the semantic level.
 
 - Indices and Slices
 
@@ -88,13 +114,48 @@
         Global variables cannot be shadowed.
 
 
+- Fields
+
+    - Adding new fields
+        ```py
+        class Person:
+            def __init__(self, name):
+                self.name = name
+
+        john = Person("John")
+        john.age = 45
+        ```
+
+        ##### IMPLEMENTATION
+
+        The fields of an object is the collection of fields attached to the object through its entire lifetime.
+
+        ```py
+        """
+        john: Object [ name: str, age: int ]
+        """
+        ```
+
+
+
 - Generators
 
 - Closures
 
+    ```py
+    def higher_order():
+
+        x = 0
+
+        def closure():
+            x = 10
+    ```
+
 - Decorators
 
-- Callable Objects
+- Callable objects
+
+- Type inference
 
 - Typing
 
@@ -106,7 +167,7 @@
 
         ##### IMPLEMENTATION
 
-        Structural typing can be used in place of duck typing.
+        Structural typing can be used in place of duck typing. In fact, Viper sees type and object relationships structurally.
 
         Methods are actually functions instantiations with interface that conform to their arguments structures.
 
@@ -143,20 +204,49 @@
             """
             ```
 
-        * Lists covariance
+        * Covariance
 
-            ```py
-            animals: Animal = []
+            Viper is a covariance-based language. A subtype value can be assigned where a supertype value is expected.
 
-            animals.append(Cat())
-            animals.append(Dog())
+            - Variables and fields
+                ```py
+                animals: Animal
 
-            print(animals[0])
+                if condition:
+                    animals = Cat()
 
-            """
-            animals: list[Cat | Dog]
-            """
-            ```
+                """
+                animals: Animal | Cat
+                """
+                ```
+
+            - Function arguments
+                ```py
+                def get_name(animal: Animal):
+                    return animal.name
+
+                cat: Cat = Cat()
+
+                get_name(cat)
+
+                """
+                get_name: (Object [ str, .. ])
+                """
+                ```
+
+            - List elements
+                ```py
+                animals: Animal = []
+
+                animals.append(Cat())
+                animals.append(Dog())
+
+                print(animals[0])
+
+                """
+                animals: list{Cat | Dog}
+                """
+                ```
 
 
         ##### IMPLEMENTATION
@@ -196,9 +286,9 @@
         animals: list [
             len: usize,
             capacity: usize,
-            buffer: buffer [
-                0: Bundle[type: usize, cat: ref Cat],
-                1: Bundle[type: usize, cat: ref Dog],
+            buffer: ref buffer [
+                0: ref Object [type: usize, cat: Cat],
+                1: ref Object [type: usize, cat: Dog],
                 ...
             ]
         ]
@@ -216,13 +306,15 @@
 
     #### IMPLEMENTATION
 
-    Viper is all about structural typing. It sees type unsafety and covariance as intersection types and inheritance as union types.
+    Viper is all about structural typing. It sees type unsafety and covariance as union types and inheritance as union types.
+
+
 
 
 #### FEATURES IN PYTHON THAT BREAK STATIC GUARANTEES OR PREVENT STATIC OPTIMIZATIONS
 
-- Eval
-    - Use of eval
+- Eval / exec
+    - Use of eval / exec
         ```py
         eval('2 + 3')
         ```
@@ -283,7 +375,7 @@
 
 - Variable
 
-    - Shadowing a global or class variable.
+    - Shadowing a global variable, class variable or variable referenced in a closure.
         ```py
         num = 10
         print(num)
@@ -307,7 +399,7 @@
 
         #### IMPLEMENTATION
 
-        A global and class variables types are determined at declaration point and cannot change. They can't be shadowed.
+        The types of global variables, class variables and variables referenced in closures are determined at declaration point and cannot change so they can't be shadowed.
 
 
 - Integers
@@ -334,13 +426,36 @@
         Viper optimizes raising StopIteration errors away in for loops.
 
 
-- Method resolution order
+- Concurrency
+
+    - Global interpreter lock
+
+        Viper is not affected by the GIL.
+
+    - Async / await
+
+        #### IMPLEMENTATION
+
+        Async / await can be built on top of go-type green threads.
+
+
+- settrace
+
+    - Modifying variables before the frame is run
+
     ```py
+    sys.settrace(value_changer)
     ```
 
-    #### IMPLEMENTATION
+    Viper does not support this.
 
-    I really do not like Python's C3 linearization mro, but I'm going with it anyway.
+- Async / await
+
+    - Unawaited async function may not get executed
+
+        NOTE: The following semantic documentation may change.
+
+        Viper's async / await is very different from Python's. Unawaited asynchronous functions run on a separate lightweight thread.
 
 ## CODE GENERATION
 
@@ -436,34 +551,34 @@
     const pi = 3.141
     ```
 
-- regex literal
+- Regex literal
     ```js
     regex = /\d+/
     ```
 
-- new versions of certain functions and objects by default
+- New versions of certain functions and objects by default
     ```py
     map, sum,
 
     map(array, lambda x: x + 1)
     ```
 
-- explicit referencing
+- Explicit referencing
     ```rust
     num2 = ref num
     ```
 
-- dereferencing
+- Dereferencing
     ```scala
     num3 = val num2
     ```
 
-- symbols
+- Symbols
     ```julia
     sym = $symbol
     ```
 
-- statement assignment
+- Statement assignment
     ```py
     value = (
         if name == 'Steve':
@@ -480,7 +595,7 @@
     )
     ```
 
-- introducing more primitive types
+- Introducing more primitive types
     ```py
     u8, u16, u32, u64, usize
     i8, i16, i32, i64, isize
@@ -501,29 +616,30 @@
         * => 11
     ```
 
-- currying
+- Partial application
     ```py
     add2 = add(2, ..)
     add10 = add(.., 10)
     ```
 
 
+- cast function
+    ```py
+    animals = [Cat(), Dog()]
+
+    """
+    ERROR
+
+    animals[0].meow() # Need to cast to a type
+    """
+
+    cast{Cat}(animals[0]).meow()
+    ```
+
 ## GARBAGE COLLECTION
-In the following code sample, it is evident that the object that `c` points to is last referenced at the call to `bar`, therefore it needs to be deallocated somewhere after the last point of reference.
+In Swift and perhaps other languages, variables are deallocated in the scope of their declaration.
 
-```py
-def foo():
-    c = 'Hello'
-    bar(c)
-    """
-    DEALLOCATE
-    c
-    """
-    for i in array:
-       print(i)
-```
-
-1. _Automatic Reference Counting_
+- Automatic Reference Counting
 
     Automatic Reference Counting with the ability to detect and break reference cycles.
 
@@ -531,97 +647,160 @@ def foo():
     parent = Parent()
 
     """
-    parent = 1
+    Parent_0 = 1
     """
 
     child = Child()
 
     """
-    parent = 1
+    Parent_0 = 1
     child = 1
     """
 
     parent.child = child
 
     """
-    parent = 1
-    child = 2
+    Parent_0 = 1
+    Child_0 = 2
     """
 
     child.parent = parent
 
     """
-    parent = 2
-    child = 2
+    DEALLOCATION POINT
 
+    Parent_0 = 2
+    Child_0 = 2
 
-    parent decrements child refs to 1
-    child decrements parent refs to 1
+    Parent_0 decrements .child refs to 1
+    Child_0 decrements .parent refs to 1
 
-    caveat:
+    problem:
     - both are still not destroyed
     - recursive avalanche of children refs decrementing
     """
+
+    print('Hello!')
     ```
 
-2. _Final Functions_
+    I don't see the benefit of this approach of keeping counts since we can track references of variables statically.
 
-    Came up with a new deallocation strategy on August 4, 2018. This deallocation scheme relies on final functions _(will be explained below)_. With final functions, all that is needed is a metadata on each heap object specifying whether it can be freed or not. A function containing the entire lifetime of an object can then specify whether such object can be freed by an inner final/non-final function call.
+- Static Reference Tracking
 
-    A final function is a function that doesn't pass its argument to another function call nor return it.
+    Static Reference Tracking (STR) is a garbage collection technique that tracks objects lifetime at compile-time.
+
+    - Non-concurrent programs
+
+        ```py
+        parent = Parent()
+
+        """
+        Parent_0 [ &parent ]
+        """
+
+        child = Child()
+
+        """
+        Parent_0 [ &parent ]
+        child [ &child ]
+        """
+
+        parent.child = child
+
+        """
+        Parent_0 [ &parent, &child ]
+        Child_0 [ &child, &parent]
+        """
+
+        child.parent = parent
+
+        """
+        DEALLOCATION
+
+        end of reference parent (*parent = null)
+        end of reference child (*child = null)
+
+        deallocate Parent_0 []
+        deallocate Child_0 []
+        """
+
+        print('Hello!')
+        ```
+
+    - Concurrent programs
+
+        Ordinary SRT is not well-suited for non-concurrent programs because there is no statically-known order to how threads execute.
+
+        ```py
+        async def foo(parent, child):
+            print(parent, child)
+
+        parent = Parent()
+        child = Child()
+        parent.child = child
+        child.parent = parent
+
+        for i in range(2):
+            """
+            increment Parent_0 (.forks += 1) [ &parent, &child ]
+            increment Child_0 (.forks += 1) [ &child, &parent ]
+            """
+            foo(parent, child)
+
+        print(parent, child)
+
+        """
+        COROUTINES
+
+            0     1     2
+            =================
+            __main__
+            |
+            ---- foo
+            |     |
+            ---------- foo
+            |     |     |
+            .     .     .
+
+        DECREMENT IN MAIN COROUTINE
+
+        end of reference parent (*parent = null)
+        end of reference child (*child = null)
+
+        decrement Parent_0 (.forks -= 1) []
+        decrement Child_0 (.forks -= 1) []
+
+        DECREMENT IN OTHER COROUTINES
+
+        Each forked coroutine will have an epilogue that decrements the objects they reference.
+        """
+        ```
+
+        In this case, the main coroutine can't release the parent, child objects
+        because they are used in the `foo` coroutine. Here we have to maintain a fork count to track the object's lifetime associated with each coroutine that referenced it.
+
+
+    **Creating statically-unknown number of objects dynamically**
+
+    The reason this isn't a issue is because objects that aren't bound to statically known names are temporary variables and their lifetimes are very predictable.
+
+    The issue of reference tracking comes into play when we are able to extend an objects lifetime by assigning them a static name.
 
     ```py
-    def qux(x):
-        foo(x)
-        foo(x)
-        bar(x)
-
-    def thud(x):
-        foo(x)
-        bar(x)
-        foo(x)
-
-    def fred(x):
-        waldo(x)
-        waldo(x)
-
-    #--------------
-
-    def waldo(x):
-        corge(x)
-
-    def corge(x):
-        bar(x)
-        bar(x)
-
-    def bar(x):
-        foo(x)
-        foo(x)
-
-    #--------------
-
-    def foo(x): # Last function
-        x + 1
-
-    #------ DEFINITION SCOPE --------
-
-    qux(x)
-    free_after(3, x)
-    thud(x)
-
+    for i in range(some_number):
+        """ Creation of temporary object """
+        foo(Value())
+        """ Desctruction of temporary object """
     ```
 
-    free directive is given at the highest scope where the variable is used
+    **Reference into a list**
 
-    This deallocation scheme is nice because it does not add an additional argument to a function signature and call to free function only happens in final functions. And given that it doesn't loop through heapvars, it is likely to be more efficient than deallocation bundle scheme.
+    If there is a reference to alist item, the entire list is not freed.
 
-#### Notes
-* There can only be one subject pointer to an object.
+    ```py
+    scores = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 
-* References can only be passed by assignment or by argument.
+    fourth = scores[3]
 
-* Subject pointers are discarded when associated objects are no longer needed.
-
-* When there is no concurrency, deallocation points of objects can be entirely determined at compile-time.
-
-* When concurrency is involved, a count is maintained for concurrent coroutines that share an object and once one of the coroutine no longer needs an object, it decrements the count and checks if it can deallocate the object.
+    some = scores[3:7]
+    ```
