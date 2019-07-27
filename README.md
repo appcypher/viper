@@ -11,9 +11,6 @@
 ## Introduction
 Viper is a compiler that compiles a restricted subset of Python to WebAssembly. Viper only supports Python3 syntax.
 
-A possible long-term goal is to provide an option to compile dynamic CPython-compatible code, which is totally dependent on how well the idea is recieved.
-
-
 ## How does this differ from RPython, Nuitka or MicroPython
 MicroPython is a well-optimized Python interpreter (with some JIT support) while Nuitka compiles Python to C. These two projects still allow dynamic aspects of Python, which means their performances will typically not reach the level of statically-typed languages.
 

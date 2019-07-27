@@ -3,7 +3,7 @@
 
 ## PARSER
 
-Viper parser is a PEG packrat parser.
+Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's grammar will specified in PEG notation.
 
 - Results of all paths that are taken are memoized.
 - A parse function result should always be an AST. Avoid returning a parse tree.
@@ -18,6 +18,7 @@ Viper parser is a PEG packrat parser.
     - Every function, method and operator is seen as a normal function.
     - Every object has a structure and classes are how we describe or classify those structures. We only think in terms of classes when an object's structure is a subset of a class's structure.
     - Inheritance / variance is an abstraction we only care about for validation purposes. Relationship between objects are only seen in terms of how similar their structure is.
+    - Global variables are variables that persist outside for entirety of the program. Glabal variables include variables declared at the toplevel, class fields and variables froma parent scope referenced by a closure.
 
 - Analysis artifacts
 
@@ -26,7 +27,7 @@ Viper parser is a PEG packrat parser.
         - Object end-of-lifetime list
 
             Each scope contain a list of objects end-of-lifetime.
-            Reference is followed only in the object's declaration scope and each object's end-of-lifetime point is adjusted as new references to it are encountered.
+            Starting from the declaration scope, each object's end-of-lifetime point is adjusted as new references to it are encountered in the declaration scope or in a parent's scope.
 
         - Type frames
 
@@ -111,7 +112,7 @@ Viper parser is a PEG packrat parser.
 
         A local variable can be shadowed. In the above example, the second `num` is a totally different variable from the first `num`.
 
-        Global variables and fields cannot be shadowed.
+        Global variables and fields cannot be shadowed
 
 
 - Fields
@@ -128,7 +129,7 @@ Viper parser is a PEG packrat parser.
 
         ##### IMPLEMENTATION
 
-        The fields of an object is the collection of fields attached to the object through its entire lifetime.
+        The fields of an object is the collection of fields attached to the object through its entire lifetime. The only exception is global variables. They can't be given new fields.
 
         ```py
         """
@@ -375,7 +376,7 @@ Viper parser is a PEG packrat parser.
 
 - Variable
 
-    - Shadowing a global variable or a field.
+    - Shadowing a global variable or an instance field.
         ```py
         num = 10
         print(num)
@@ -399,9 +400,9 @@ Viper parser is a PEG packrat parser.
 
         #### IMPLEMENTATION
 
-        The types of global variables, fields are determined at declaration point and cannot change so they can't be shadowed. The reason this isn't allowed is because it can lead to unintuitive behaviors and is hard to optimize.
-        
-        The full list of variable types that cannot be shadowed
+        The types of global variables and instance fields are determined at declaration point and cannot change so they can't be shadowed. The reason this isn't allowed is because it makes the program hard to reason about, increases compilation time and makes incremental compilation hard to achieve.
+
+         The full list of variable types that cannot be shadowed
         - global variables
         - instance and class fields
         - variables from outer scope referenced in a closure
@@ -488,9 +489,22 @@ Viper parser is a PEG packrat parser.
 
     pegasus: Horse & Bird = Pegasus()
 
-    class Person{T}(A, B):
+    # Type reltionship
+    Person < Mammal
+    Mammal > Person
+    Person == Person
+
+    # Interface (In draft). Similar to Go2's contracts
+    interface Equal{T, U}(Eq) where T > Mammal, U == Person:
+        def __eq__(T, U): pass
+
+    # Generics
+    class Person{T, U: Equal}(A, B):
         def __init__(self, name: T):
             self.name = name
+
+        def __eq__(self, name: T, other_name: U):
+            return name == other_name
 
     john = Person{str}('John Doe')
 
@@ -500,9 +514,18 @@ Viper parser is a PEG packrat parser.
     jane = get_person{str}('Jane Doe')
     ```
 
+- None handling
+    ```py
+    def get_optional() -> int?:
+        return None
+
+    if identity := get_optional():
+        print(identity)
+    ```
+
 - Algebraic data types
     ```py
-    type Option{T}:
+    enum Option{T}:
         Ok(value: T) | Err() | None
 
     identity: Option{str} = None
@@ -521,7 +544,12 @@ Viper parser is a PEG packrat parser.
 
 - Additional reserved keywords
     ```py
-    const, ref, val, match, let, var, enum
+    const, ref, ptr, val, match, let, var, enum, true, false, interface, where
+    ```
+
+- Consistent use of underscore
+    ```py
+    dictionary.from_keys('a, b, c')
     ```
 
 - UFCS
@@ -531,7 +559,7 @@ Viper parser is a PEG packrat parser.
     ls.len()
     ```
 
-- multiline lambda
+- Multiline lambda
     ```py
     map(
     lambda x:
@@ -568,13 +596,16 @@ Viper parser is a PEG packrat parser.
     map(array, lambda x: x + 1)
     ```
 
-- Explicit referencing
+- Explicit reference
     ```rust
     num2 = ref num
+    num3 = num2
     ```
 
-- Dereferencing
-    ```scala
+- Pointers
+    ```nim
+    num2 = ptr num
+    num2 += 1
     num3 = val num2
     ```
 
@@ -641,8 +672,24 @@ Viper parser is a PEG packrat parser.
     cast{Cat}(animals[0]).meow()
     ```
 
+- Overloading functions and methods based on arity and types
+    ```py
+    class Person:
+        def __init__(self, name):
+            self.name = name
+
+        def __init__(self, name, age):
+            self.name = name
+            self.age = age
+
+        def __init__(self, name, age: int):
+            self.name = name
+            self.age = age
+    ```
+
+
 ## GARBAGE COLLECTION
-In Swift and perhaps other languages, variables are deallocated in the scope of their declaration.
+In Swift, variables are deallocated in their declaration stack frames or parents of that. Never a child frame of the declaration scope. Viper takes a similar approach.
 
 - Automatic Reference Counting
 
