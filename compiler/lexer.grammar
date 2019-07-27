@@ -1,0 +1,6 @@
+newline =
+    | '\r' '\n'?
+    | '\n'
+
+identifer =
+    | [A-Za-z0-9_]
