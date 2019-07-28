@@ -33,7 +33,9 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
 
             A type frame is created for each function.
             This type frame holds a list of functions called in the function's scope.
-            To instantiate a type frame, we need to validate that the types in the scope truly have an associated function instantiation. An instantiation [shouldn't clone the AST](https://github.com/crystal-lang/crystal/issues/4864#issue-251536917).
+            To instantiate a type frame, we need to validate that the types in the scope truly have an associated function instantiation. Validations for existing instantiations are skipped.
+
+            An instantiation [shouldn't clone the AST](https://github.com/crystal-lang/crystal/issues/4864#issue-251536917).
 
         - Type method resolution order (MRO) lists (C3 linearization)
 
@@ -139,18 +141,17 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
 
 - Closures
 
-    closure = env_ptr + function_ptr
+    `closure = func(*args, ref env)`
 
     ```py
     def higher_order():
-
         x = 0
 
         def closure():
             x = 10
     ```
 
-
+    Variables referenced within the closure can be optimized (moved into the closure) if not used, referenced or returned by parent function or sibling closures. This way, the `env` reference can be omitted.
 
 - Decorators
 
@@ -251,6 +252,27 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
                 """
                 ```
 
+            - Inheritance
+                ```py
+                class Vehicle:
+                    # ...
+                    def clone(self) -> Vehicle:
+                        return Vehicle(*self.fields)
+
+                class Toyota(Vehicle):
+                    # ...
+                    def clone(self) -> Toyota:
+                        return Toyota(*vars(self))
+
+                cars: list{Vehicle} = [Toyota(), Mazda()]
+
+                cars[0].clone()
+
+                """
+                animals: list{Cat | Dog}
+                """
+                ```
+
 
         ##### IMPLEMENTATION
 
@@ -324,50 +346,115 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
 
 - Introspection
 
-    - Modifying the source bytecode
+    - Viper doesn't have a bytecode IR, but it does have a wasm codegen that you can introspect.
         ```py
-        ...
         ```
 
 - Type annotations
 
-    - Type annotations don't affect the program
+    - Type annotations affect are help with type-checking and optimizations
+
+        CPython doesn't take advantage of type annotations.
+
         ```py
         num: int = 50
-        num = "Hello"
-        ```
 
-        Python doesn't take advantage of type annotations.
+        """
+        ERROR
+
+        num = "Hello"
+        """
+        ```
 
 - Fields
 
-    - Deleting fields
+    - Deleting fields isn't supported
         ```py
+        """
+        ERROR
+
         del john.name
+        """
+        ```
+
+    - `vars` and `__dict__` return named tuples
+        ```py
+        print(vars(john)) # (name='John', age=45)
         ```
 
 - Tuples
 
-    - Spreading within tuples
+    - A tuple can only be indexed with a literal value
         ```py
-        (head, *tail)
+        tup = (1, 2, 3)
+        tup[0]
+
+        """
+        ERROR
+
+        tup[n]
+        """
         ```
+
+    - A tuple element can be modified in Viper
+        ```py
+        tup = (1, 2, 3)
+        tup[0] = 4
+        ```
+
+    - Directly or indirectly, a tuple can't be used spread or appended to itself.
+
+        Basically anything that makes assigning a reference/name with its previous tuple value possible is not allowed. Only identity assignment is allowed. It's a recursive problem, that static analyzers generally can't resolve and hate.
+
+        ```py
+        tup1 = (1, 2)
+        tup2 = (5, 6)
+
+        for i in range(x):
+            tup3 = (1, *tup1)
+            tup2 = (*tup3, *tup1)
+
+        # Identity assignment is allowed
+        tup3 = tup3
+        tup3 = (*tup3)
+
+        """
+        ERROR
+
+        for i in range(x):
+            tup2 = (*tup2, *tup1)
+
+        for i in range(x):
+            tup2 = tup2 + tup1
+
+        for i in range(x):
+            tup3 = (*tup2, 1)
+            tup2 = (tup3, tup1)
+        """
+        ```
+
 
 - Functions
 
-    - Spreading dictionary as keyword arguments
+    - Vipers doesn't permit spreading any iterable, except tuple, as arguments to a function
         ```py
-        func(**dictionary)
-        ```
+        dc = { 'name': 'John', 'age': 45 }
+        ls = [1, 2, 3]
+        tup = (1, 2, 3)
 
-    - Spreading other iterables apart from tuple as arguments
-        ```py
-        func(*ls)
+        some_func(*tup)
+
+        """
+        ERROR
+
+        some_func(**dc)
+        some_func(*ls)
+        """
         ```
 
 - Imports
 
-    - Resolving imported modules at runtime
+    - Viper resolves imported modules at compile-time
         ```py
         name, age = "John", 45
 
@@ -378,7 +465,7 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
 
 - Variable
 
-    - Shadowing a global variable or an instance field.
+    - Viper doesn't support shadowing global variables or instance fields.
         ```py
         num = 10
         print(num)
@@ -400,8 +487,6 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
         Person.change_specie()
         ```
 
-        #### IMPLEMENTATION
-
         The types of global variables and instance fields are determined at declaration point and cannot change so they can't be shadowed. The reason this isn't allowed is because it makes the program hard to reason about, increases compilation time and makes incremental compilation hard to achieve.
 
          The full list of variable types that cannot be shadowed
@@ -412,14 +497,13 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
 
 - Integers
 
-    - Abitrary-precision integers
+    - `int`s are represented as 64-bit signed integers.
+        This means ints overflow when they exceed `-4_611_686_018_427_387_904 < x < 4_611_686_018_427_387_903` bounds.
+
         ```py
-        num = 9_223_372_036_854_775_807 + 1
+        num = 4_611_686_018_427_387_902 + 1
+        print(num) # -4_611_686_018_427_387_903
         ```
-
-        #### IMPLEMENTATION
-
-        `int`s are represented as 64-bit integers.
 
 - StopIteration
 
@@ -428,8 +512,6 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
         for i in range(10):
             print(25)
         ```
-
-        #### IMPLEMENTATION
 
         Viper optimizes raising StopIteration errors away in for loops.
 
@@ -442,28 +524,45 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
 
     - Async / await
 
-        #### IMPLEMENTATION
-
         Async / await can be built on top of go-type green threads.
+
+        ```py
+        async def foo(id):
+            sleep(3)
+            print(f'Done sleeping {id}')
+
+        foo(1)
+        foo(2)
+        foo(3)
+        ```
 
 
 - settrace
 
-    - Modifying variables before the frame is run
+    - Viper doesn't support modifying variables before the frame is run
 
-    ```py
-    sys.settrace(value_changer)
-    ```
+        ```py
+        """
+        ERROR
 
-    Viper does not support this.
+        sys.settrace(value_changer)
+        """
+        ```
 
 - Async / await
 
-    - Unawaited async function may not get executed
+    - Unawaited async function may not get executed in CPython
 
         NOTE: The following semantic documentation may change.
 
         Viper's async / await is very different from Python's. Unawaited asynchronous functions are executed on separate green threads.
+
+
+- Source file
+
+    - Multiple encoding support
+        Unlike CPython, Viper only support utf-8 files.
+
 
 ## CODE GENERATION
 
@@ -548,7 +647,7 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
 
 - Additional reserved keywords
     ```py
-    const, ref, ptr, val, match, let, var, enum, true, false, interface, where
+    const, ref, ptr, val, match, let, var, enum, true, false, interface, where, macro
     ```
 
 - Consistent use of underscores
@@ -616,6 +715,19 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
 - Symbols
     ```julia
     sym = $symbol
+    ```
+
+- New namedtuple syntax
+    ```py
+    named_tup = (name="James", age=10)
+    named_tup[$name]
+
+    """
+    ERROR
+
+    named_tup[name]
+    named_tup['name']
+    """
     ```
 
 - Statement assignment
@@ -691,6 +803,16 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
             self.age = age
     ```
 
+- Hygenic macros
+    ```py
+    macro hello_macro($func: Identifier, [ $(, $expr: Expression)* ] ):
+        print('|| HELLO MACRO ||')
+        $func( $( expr, )* )
+
+    hello_macro!(foo, [1, 2, 3])
+    ```
+
+    NOTE: Susceptible to change.
 
 ## GARBAGE COLLECTION
 In Swift, variables are deallocated in their declaration stack frames or parents of that. Never a child frame of the declaration scope. Viper takes a similar approach.
@@ -739,11 +861,11 @@ In Swift, variables are deallocated in their declaration stack frames or parents
     print('Hello!')
     ```
 
-    I don't see the benefit of this approach of keeping counts since we can track references of variables statically.
+    Since lifetimes can be tracked statically, I don't see the runtime benefit of this approach.
 
 - Static Reference Tracking
 
-    Static Reference Tracking (STR) is a garbage collection technique that tracks objects lifetime at compile-time.
+    Static Reference Tracking (STR) is a garbage collection technique that tracks objects' lifetimes at compile-time.
 
     - Non-concurrent programs
 
@@ -764,11 +886,16 @@ In Swift, variables are deallocated in their declaration stack frames or parents
         parent.child = child
 
         """
-        Parent_0 [ &parent, &child ]
-        Child_0 [ &child, &parent]
+        Parent_0 [ &parent, ]
+        Child_0 [ &child, &parent ]
         """
 
         child.parent = parent
+
+        """
+        Parent_0 [ &parent, &child ]
+        Child_0 [ &child, &parent ]
+        """
 
         """
         DEALLOCATION
@@ -838,9 +965,9 @@ In Swift, variables are deallocated in their declaration stack frames or parents
 
     **Creating statically-unknown number of objects dynamically**
 
-    The reason this isn't a issue is because objects that aren't bound to statically known names are temporary variables and their lifetimes are very predictable.
+    Creating statically-unknown number of objects dynamically isn't an issue for SRT because objects are bound to statically-known names at compile-time. With the exception of temporary objects whose lifetimes are well-defined and statically determinable.
 
-    The issue of reference tracking comes into play when we are able to extend an objects lifetime by assigning them a static name.
+    The issue of garbage collection comes into play when we are able to extend an objects lifetime beyond the declaration stack frame. This is amenable to static analysis because such objects are required to be associated with statically-known names.
 
     ```py
     for i in range(some_number):
@@ -849,9 +976,13 @@ In Swift, variables are deallocated in their declaration stack frames or parents
         """ Desctruction of temporary object """
     ```
 
+    **Pointer aliasing**
+
+    Raw pointer aliasing affects all GC techniques. SRT, Tracing GCs, ARC. That is why we have references. They are an abstraction over pointers, something our GCs understand. Raw pointer misuse is a problem for any GC technique.
+
     **Reference into a list**
 
-    If there is a reference to alist item, the entire list is not freed.
+    If there is a reference to a list item, the entire list is not freed until all references to it and/or its elements are dead.
 
     ```py
     scores = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
