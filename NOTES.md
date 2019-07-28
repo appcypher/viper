@@ -13,35 +13,33 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
 
 - Philosophy
 
-    Viper has certain world-views that make the semantic analysis phase easier to understand and implement.
+    Viper has certain worldviews that make the semantic analysis phase easier to understand and implement.
 
-    - Every function, method and operator is seen as a normal function.
-    - Every object has a structure and classes are how we describe or classify those structures. We only think in terms of classes when an object's structure is a subset of a class's structure.
-    - Inheritance / variance is an abstraction we only care about for validation purposes. Relationship between objects are only seen in terms of how similar their structure is.
-    - Global variables are variables that persist outside for entirety of the program. Glabal variables include variables declared at the toplevel, class fields and variables froma parent scope referenced by a closure.
+    - A function, in Viper implementation parlance, is a regular function, a method, a closure or an operator.
+    - Every object has a structure and classes are how we describe or classify those structures. We only think in terms of classes when we need to compare an object's structure with a class' blueprint structure.
+    - Inheritance / variance is an abstraction we only care about for validation/type-checking purposes. Relationship between objects are only seen in terms of how similar their structures are.
+    - Global variables are variables that persist throughout lifetime of the program. Global variables include typical global variables declared at the top-level, class fields and variables from a parent scope referenced by a closure.
 
 - Analysis artifacts
 
     - Scope tree
 
-        - Object end-of-lifetime list
+        - Object end-of-lifetime (EOL) list
 
-            Each scope contain a list of objects end-of-lifetime.
-            Starting from the declaration scope, each object's end-of-lifetime point is adjusted as new references to it are encountered in the declaration scope or in a parent's scope.
+            Each scope contain a list of objects' EOL.
+            Starting from the declaration scope, each object's EOL point is adjusted as new references to it are encountered in the declaration scope or in a parent's scope.
 
         - Type frames
 
             A type frame is created for each function.
-            This type frame holds information about the type flow in the function's scope.
-            To instantiate a type frame, we need to validate that the types used in the scope truly have an associated function instantiation.
+            This type frame holds a list of functions called in the function's scope.
+            To instantiate a type frame, we need to validate that the types in the scope truly have an associated function instantiation. An instantiation [shouldn't clone the AST](https://github.com/crystal-lang/crystal/issues/4864#issue-251536917).
 
-        - Type mro lists (C3 linearization)
+        - Type method resolution order (MRO) lists (C3 linearization)
 
         - Type instantiations
 
         - Function instantiations
-
-            Viper sees all operators and methods as functions. There is no difference at the semantic level.
 
 - Indices and Slices
 
@@ -84,7 +82,7 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
 
         If a list is uninitialized, we wait until it is first used. Its type is inferred based on how it is used.
 
-        If it is passed to a function, its type is determined by the argument type, otherwise it is determined by its usage in the function's body.
+        If it is passed as an argument to a function, its type is determined by the argument type, otherwise it is determined by its usage in the function's body.
 
 - Variable
 
@@ -110,9 +108,7 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
 
         #### IMPLEMENTATION
 
-        A local variable can be shadowed. In the above example, the second `num` is a totally different variable from the first `num`.
-
-        Global variables and fields cannot be shadowed
+        A local variable can be shadowed. In the above example, the second `num` is a totally different variable from the first `num`. However, global variables and fields cannot be shadowed.
 
 
 - Fields
@@ -143,6 +139,8 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
 
 - Closures
 
+    closure = env_ptr + function_ptr
+
     ```py
     def higher_order():
 
@@ -151,6 +149,8 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
         def closure():
             x = 10
     ```
+
+
 
 - Decorators
 
@@ -170,18 +170,20 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
 
         Structural typing can be used in place of duck typing. In fact, Viper sees type and object relationships structurally.
 
-        Methods are actually functions instantiations with interface that conform to their arguments structures.
+        Methods are actually functions instantiations with an abi that conform to their arguments structures.
 
         ```py
         """
         cat: Cat [ name: str ]
         john: Person [ age: int, name: str ]
         hibiscus: Plant [ name: int, age: int ]
+        elephant: Herbivore [ name: int ]
         """
 
         foo(cat)
         foo(john)
         foo(hibiscus)
+        foo(elephant)
 
         """
         INSTANTIATIONS
@@ -301,13 +303,13 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
         animal: Cat | Dog
         """
 
-        if animal := cast(Cat):
+        if animal := cast{Cat}(animal):
             animal.meow()
         ```
 
     #### IMPLEMENTATION
 
-    Viper is all about structural typing. It sees type unsafety and covariance as union types and inheritance as union types.
+    Viper is all about structural typing. It sees type unsafety and covariance as union types and inheritance as intersection types.
 
 
 
@@ -461,7 +463,7 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
 
         NOTE: The following semantic documentation may change.
 
-        Viper's async / await is very different from Python's. Unawaited asynchronous functions run on a separate lightweight thread.
+        Viper's async / await is very different from Python's. Unawaited asynchronous functions are executed on separate green threads.
 
 ## CODE GENERATION
 
@@ -475,18 +477,22 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
     ```py
     index: int = 9
 
+    # Type argument
     nums: list{int} = []
 
+    # Optional type
     age: int? = 45
 
+    # Function type
     fn: (int, int) -> int = sum
 
+    # Tuple type
     value: (int, int) = (1, 2, 3)
 
-    mappings: dict{int, int} = dict()
-
+    # Union type
     identity: int | str = 'XNY7V40'
 
+    # Intersection type
     pegasus: Horse & Bird = Pegasus()
 
     # Type reltionship
@@ -505,8 +511,6 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
 
         def __eq__(self, name: T, other_name: U):
             return name == other_name
-
-    john = Person{str}('John Doe')
 
     def get_person{T}(name: T):
         return Person{T}(name)
@@ -547,7 +551,7 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
     const, ref, ptr, val, match, let, var, enum, true, false, interface, where
     ```
 
-- Consistent use of underscore
+- Consistent use of underscores
     ```py
     dictionary.from_keys('a, b, c')
     ```
@@ -579,7 +583,7 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
     )
     ```
 
-- const keyword
+- `const` keyword
     ```py
     const pi = 3.141
     ```
@@ -638,7 +642,7 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
     f32, f64
     ```
 
-- match statement
+- Pattern matching
     ```py
     match x:
         Person(name, age) => 1
@@ -659,7 +663,7 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
     ```
 
 
-- cast function
+- Cast function
     ```py
     animals = [Cat(), Dog()]
 
@@ -691,9 +695,9 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
 ## GARBAGE COLLECTION
 In Swift, variables are deallocated in their declaration stack frames or parents of that. Never a child frame of the declaration scope. Viper takes a similar approach.
 
-- Automatic Reference Counting
+- Automatic Reference Counting (ARC)
 
-    Automatic Reference Counting with the ability to detect and break reference cycles.
+    Typical ARC implementation cannot break reference cycles.
 
     ```py
     parent = Parent()
@@ -828,8 +832,8 @@ In Swift, variables are deallocated in their declaration stack frames or parents
         """
         ```
 
-        In this case, the main coroutine can't release the parent, child objects
-        because they are used in the `foo` coroutine. Here we have to maintain a fork count to track the object's lifetime associated with each coroutine that referenced it.
+        In this case, the main coroutine can't release the `parent` and `child` objects
+        because they are referenced in the `foo` coroutines. Here we have to maintain a fork count to track the object's lifetime associated with each coroutine that referenced it.
 
 
     **Creating statically-unknown number of objects dynamically**
