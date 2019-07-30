@@ -18,7 +18,7 @@ RPython, on the other hand, is similar to this project, but the developers have 
 
 
 ## Non-goals
-Total semantic compatibility with CPython isn't a goal. For example, viper represents `int`s as 64-bit integers.
+Semantic compatibility with CPython isn't a goal. For example, Viper represents `int`s as 64-bit integers.
 
 
 ## Possible CLI
@@ -26,3 +26,7 @@ Total semantic compatibility with CPython isn't a goal. For example, viper repre
 viper sample.vy
 ```
 
+### TESTS
+```sh
+pytest
+```

@@ -5,8 +5,11 @@ verify_ssl = true
 
 [dev-packages]
 flake8 = "*"
+yapf = "*"
 
 [packages]
+pytest-pythonpath = "*"
+pytest-cov = "*"
 
 [requires]
 python_version = "3.7"
