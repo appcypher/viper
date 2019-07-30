@@ -1,1 +1,3 @@
 .vscode
+htmlcov
+**/__pycache__
