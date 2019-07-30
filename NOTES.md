@@ -56,6 +56,8 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
         Since bound checks are going to be made anyway, we should find a way to make positive indices as fast as they would have been and negative indices a check slower.
 
         ```py
+        value = 0
+        
         if -1 < index > len(array): # positive indices
             value = array[index]
         elif 0 > index >= -len(array): # negative indices
@@ -196,8 +198,10 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
         ```
 
     - Type unsafety
-        * Control flow
+        * Type union
             ```py
+            identity: int | str
+
             if condition:
                 identity = 45
             else:
@@ -273,12 +277,35 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
                 """
                 ```
 
+        * Contravariance
+
+            - Functions
+                ```py
+                type IdentityFunc{T}: (T) -> T
+
+                def identity_animal(x: Animal):
+                    return x
+
+                def identity_cat(x: Cat):
+                    return x
+
+                compare: IdentityFunc{Cat} = identity_animal
+
+                """
+                ERROR
+
+                compare: IdentityFunc{Animal} = identity_cat
+                """
+                ```
+
 
         ##### IMPLEMENTATION
 
         Variables with uncertain types don't make it far because to use them with any function require that any field or method accessed through them exists across the types.
 
         ```py
+        identity: int | str
+
         if condition:
             identity = 45
         else:
@@ -564,6 +591,10 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
         Unlike CPython, Viper only support utf-8 files.
 
 
+- Scoping rules
+
+    - Viper has different scoping rule. `if-elif-else`, `for-else`, `try-except-ensure` and `while-else` blocks all have their own scopes
+
 ## CODE GENERATION
 
 - WebAssembly
@@ -717,17 +748,10 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
     sym = $symbol
     ```
 
-- New namedtuple syntax
+- New named_tuple syntax
     ```py
     named_tup = (name="James", age=10)
-    named_tup[$name]
-
-    """
-    ERROR
-
-    named_tup[name]
-    named_tup['name']
-    """
+    named_tup.name
     ```
 
 - Statement assignment
