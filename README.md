@@ -25,8 +25,3 @@ Semantic compatibility with CPython isn't a goal. For example, Viper represents 
 ```sh
 viper sample.vy
 ```
-
-### TESTS
-```sh
-pytest
-```

@@ -3,7 +3,7 @@
 
 ## PARSER
 
-Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's grammar will specified in PEG notation.
+Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's grammar is specified in PEG notation.
 
 - Results of all paths that are taken are memoized.
 - A parse function result should always be an AST. Avoid returning a parse tree.
@@ -57,7 +57,7 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
 
         ```py
         value = 0
-        
+
         if -1 < index > len(array): # positive indices
             value = array[index]
         elif 0 > index >= -len(array): # negative indices
@@ -71,14 +71,16 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
     - Uninitialized list
         ```py
         ls = []
-        print(ls) # Uninitialized empty list
-        ```
 
-        ```py
+        """
+        ERROR
+
+        print(ls)
+        """
+
         def func(ls):
             ls.append('hi')
 
-        ls = []
         func(ls)
         ```
 
@@ -173,7 +175,7 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
 
         Structural typing can be used in place of duck typing. In fact, Viper sees type and object relationships structurally.
 
-        Methods are actually functions instantiations with an abi that conform to their arguments structures.
+        Functions are actually instantiations with abis that conform to argument binary structures.
 
         ```py
         """
@@ -214,7 +216,7 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
 
         * Covariance
 
-            Viper is a covariance-based language. A subtype value can be assigned where a supertype value is expected.
+            A subtype value can be assigned where a supertype value is expected.
 
             - Variables and fields
                 ```py
@@ -281,7 +283,7 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
 
             - Functions
                 ```py
-                type IdentityFunc{T}: (T) -> T
+                typealias IdentityFunc{T}: (T) -> T
 
                 def identity_animal(x: Animal):
                     return x
@@ -373,13 +375,16 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
 
 - Introspection
 
-    - Viper doesn't have a bytecode IR, but it does have a wasm codegen that you can introspect.
+    - Viper doesn't have a bytecode IR, but it does have a wasm codegen that one can introspect.
         ```py
+        from dis import dis
+
+        dis(some_func)
         ```
 
 - Type annotations
 
-    - Type annotations affect are help with type-checking and optimizations
+    - Type annotations is used in semantic analysis
 
         CPython doesn't take advantage of type annotations.
 
@@ -411,7 +416,7 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
 
 - Tuples
 
-    - A tuple can only be indexed with a literal value
+    - A tuple can only be indexed with a signed integer literal
         ```py
         tup = (1, 2, 3)
         tup[0]
@@ -463,13 +468,15 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
 
 - Functions
 
-    - Vipers doesn't permit spreading any iterable, except tuple, as arguments to a function
+    - Vipers doesn't support spreading any iterable except tuples and named tupeles as arguments to a function
         ```py
         dc = { 'name': 'John', 'age': 45 }
         ls = [1, 2, 3]
         tup = (1, 2, 3)
+        named_tup = (one=1, two=2, three=3)
 
         some_func(*tup)
+        some_func(*named_tup)
 
         """
         ERROR
@@ -648,6 +655,11 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
     jane = get_person{str}('Jane Doe')
     ```
 
+- Type alias
+    ```py
+    typealias IdentityFunc{T}: (T) -> T
+    ```
+
 - None handling
     ```py
     def get_optional() -> int?:
@@ -678,7 +690,7 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
 
 - Additional reserved keywords
     ```py
-    const, ref, ptr, val, match, let, var, enum, true, false, interface, where, macro
+    const, ref, ptr, val, match, let, var, enum, true, false, interface, where, macro, typealias
     ```
 
 - Consistent use of underscores
@@ -879,17 +891,17 @@ In Swift, variables are deallocated in their declaration stack frames or parents
 
     problem:
     - both are still not destroyed
-    - recursive avalanche of children refs decrementing
+    - avalanche of children refs decrement
     """
 
     print('Hello!')
     ```
 
-    Since lifetimes can be tracked statically, I don't see the runtime benefit of this approach.
+    Since lifetimes can be tracked statically, I don't see the runtime benefit of ARC.
 
-- Static Reference Tracking
+- Static Reference Tracking (SRT)
 
-    Static Reference Tracking (STR) is a garbage collection technique that tracks objects' lifetimes at compile-time.
+    SRT is a garbage collection technique that tracks objects' lifetimes at compile-time.
 
     - Non-concurrent programs
 
@@ -991,13 +1003,13 @@ In Swift, variables are deallocated in their declaration stack frames or parents
 
     Creating statically-unknown number of objects dynamically isn't an issue for SRT because objects are bound to statically-known names at compile-time. With the exception of temporary objects whose lifetimes are well-defined and statically determinable.
 
-    The issue of garbage collection comes into play when we are able to extend an objects lifetime beyond the declaration stack frame. This is amenable to static analysis because such objects are required to be associated with statically-known names.
+    The issue of garbage collection comes into play when we are able to extend an objects lifetime beyond the declaration stack frame. This is amenable to static analysis, however, because such objects are required to be associated with statically-known names.
 
     ```py
     for i in range(some_number):
         """ Creation of temporary object """
         foo(Value())
-        """ Desctruction of temporary object """
+        """ Destruction of temporary object """
     ```
 
     **Pointer aliasing**

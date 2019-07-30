@@ -14,12 +14,12 @@ class ValidTokens:
         'finally', 'for', 'from', 'global', 'if', 'import', 'in', 'is',
         'lambda', 'nonlocal', 'not', 'or', 'pass', 'raise', 'return', 'try',
         'while', 'with', 'yield', 'const', 'ref', 'ptr', 'val', 'match', 'let',
-        'var', 'enum', 'true', 'false', 'interface', 'where', 'macro'
+        'var', 'enum', 'true', 'false', 'interface', 'where', 'macro', 'typealias'
     ]
 
 
 class Indentation:
-    """ """
+    """ Contains a lexer's indentation information """
     def __init__(self):
         self.indent_count = 0
         self.is_space = True
@@ -49,6 +49,8 @@ class TokenKind(Enum):
     NEWLINE = 1
     INTEGER_DEC = 2
     FLOAT_DEC = 3
+    INDENT = 4
+    DEDENT = 5
 
 
 class LexerError(Exception):
@@ -115,16 +117,16 @@ class Lexer:
             row, column = self.row, self.column
 
             # We check each character in the code and categorize it
-            if char == '\r':  # NEWLINE
+            if char == '\r':  # character is a NEWLINE
                 if self.peek_char() == '\n':
                     self.eat_char()
 
                 tokens.append(Token('', TokenKind.NEWLINE, row, column))
 
-            elif char == '\n':  # NEWLINE
+            elif char == '\n':  # character is a NEWLINE
                 tokens.append(Token('', TokenKind.NEWLINE, row, column))
 
-            elif Lexer.is_identifier_start(char):  # IDENTIFIER
+            elif Lexer.is_identifier_start(char):  # character is an IDENTIFIER
                 token = char
                 peeked_char = self.peek_char()
 
