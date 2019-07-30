@@ -1,2 +1,5 @@
+from compiler.lexer import (Lexer)
+
 if __name__ == '__main__':
-    print('boom!')
+    lexer = Lexer('hello world')
+    print(lexer.lex())
