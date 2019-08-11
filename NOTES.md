@@ -382,6 +382,12 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
         dis(some_func)
         ```
 
+- Declaration
+
+    - Declara.tion of classes and functions work a bit different in Viper.
+
+        Because Viper needs to determine a class and function at compile-time, it doesn't support dynamic loading of classes or functions the way Python does. It also doesn't provide a lot of hooks found in builtin module
+
 - Type annotations
 
     - Type annotations is used in semantic analysis
@@ -612,6 +618,7 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
 
 - Type annotation revamp
     ```py
+    # Type anotation
     index: int = 9
 
     # Type argument
@@ -841,7 +848,7 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
 
 - Hygenic macros
     ```py
-    macro hello_macro($func: Identifier, [ $(, $expr: Expression)* ] ):
+    macro hello_macro($func: Identifier [ $(, $expr: Expression)* ] ):
         print('|| HELLO MACRO ||')
         $func( $( expr, )* )
 
