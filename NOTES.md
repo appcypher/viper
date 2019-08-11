@@ -384,7 +384,7 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
 
 - Declaration
 
-    - Declara.tion of classes and functions work a bit different in Viper.
+    - Declaration of classes and functions work a bit different in Viper.
 
         Because Viper needs to determine a class and function at compile-time, it doesn't support dynamic loading of classes or functions the way Python does. It also doesn't provide a lot of hooks found in builtin module
 
