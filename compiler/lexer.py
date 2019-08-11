@@ -1,25 +1,12 @@
 """ Contains Viper's lexer implementation """
 
 from enum import Enum
-
-
-class ValidTokens:
-    """
-    Contains some of the legal characters, tokens and keywords allowed by the
-    Lexer
-    """
-    keywords = [
-        'False', 'None', 'True', 'and', 'as', 'assert', 'async', 'await',
-        'break', 'class', 'continue', 'def', 'del', 'elif', 'else', 'except',
-        'finally', 'for', 'from', 'global', 'if', 'import', 'in', 'is',
-        'lambda', 'nonlocal', 'not', 'or', 'pass', 'raise', 'return', 'try',
-        'while', 'with', 'yield', 'const', 'ref', 'ptr', 'val', 'match', 'let',
-        'var', 'enum', 'true', 'false', 'interface', 'where', 'macro', 'typealias'
-    ]
+from valid import ValidTokens
 
 
 class Indentation:
     """ Contains a lexer's indentation information """
+
     def __init__(self):
         self.indent_count = 0
         self.is_space = True
@@ -28,6 +15,7 @@ class Indentation:
 
 class Token:
     """ Token is a unit extracted """
+
     def __init__(self, data, kind, row, column):
         self.data = data
         self.kind = kind
@@ -35,34 +23,52 @@ class Token:
         self.column = column
 
     def __repr__(self):
-        return (f'Token(data="{self.data}", kind={self.kind}, row={self.row}'
-                f', column={self.column})')
+        return (
+            f'Token(data="{self.data}", kind={self.kind}, row={self.row}'
+            f", column={self.column})"
+        )
 
     def __eq__(self, other):
-        return (self.data == other.data and self.kind == other.kind
-                and self.row == other.row and self.column == other.column)
+        return (
+            self.data == other.data
+            and self.kind == other.kind
+            and self.row == other.row
+            and self.column == other.column
+        )
 
 
 class TokenKind(Enum):
     """ The different kinds of token """
+
     IDENTIFIER = 0
     NEWLINE = 1
     INTEGER_DEC = 2
     FLOAT_DEC = 3
     INDENT = 4
     DEDENT = 5
+    PREFIXED_STRING = 6
+    STRING = 7
 
 
 class LexerError(Exception):
     """ Represents the error the lexer can raise """
+
     def __init__(self, message, row, column):
         super().__init__(message)
+        self.message = message  # Added because it is missing after super init
         self.row = row
         self.column = column
+
+    def __repr__(self):
+        return (
+            f'LexerError(message="{self.message}", row={self.row}'
+            f", column={self.column})"
+        )
 
 
 class Lexer:
     """ Contains the lexer implementation """
+
     def __init__(self, code):
         self.code = code
         self.code_length = len(code)
@@ -79,33 +85,120 @@ class Lexer:
         """
         if self.cursor + 1 < self.code_length:
             self.cursor += 1
-            return self.code[self.cursor]
+            self.column += 1
+            char = self.code[self.cursor]
+
+            # Register row if character is a newline
+            if char == "\r":
+                if self.code[self.cursor + 1 : self.cursor + 2] == "\n":
+                    self.cursor += 1
+                self.column = -1
+                self.row += 1
+            elif char == "\n":
+                self.column = -1
+                self.row += 1
+
+            return char
 
         return None
 
-    def peek_char(self):
+    def eat_token(self, test_token):
+        """
+        Checks if the next sequence of bytes in code is *test_token*
+        """
+        length = len(test_token)
+        start = self.cursor + 1
+        end = start + length
+
+        if end <= self.code_length and test_token == self.code[start:end]:
+            self.cursor += length
+            self.column += length
+            return test_token
+
+        return None
+
+    def peek_char(self, offset=1):
         """ Peeks at the next character in code """
-        if self.cursor + 1 < self.code_length:
-            return self.code[self.cursor + 1]
+        if self.cursor + offset < self.code_length:
+            return self.code[self.cursor + offset]
 
         return None
+
+    def peek_token(self, start, end):
+        """ Peeks at the next character in code """
+        if (self.cursor + start >= self.cursor) and (
+            self.cursor + end <= self.code_length
+        ):
+            return self.code[self.cursor + start : self.cursor + end]
+
+        return None
+
+    def get_row_column(self):
+        return self.row, self.column
 
     def is_identifier_start(char):
-        """ Checks if a character has the following pattern: [A-Za-z_] """
-        num = ord(char)
-        return ((64 < num < 91) or  # A-Z
-                (96 < num < 123) or  # a-z
-                (char == '_')  # _
-                )
+        """
+        TODO: Check if a character is of the following Unicode categories:
+            Lu, Ll, Lt, Lm, Lo, Nl, _
 
-    def is_identifier_mid(char):
-        """ Checks if a character has the following pattern: [A-Za-z0-9_] """
+        TODO: Normalize (using NFKC normalization form)
+        the codepoints
+
+        https://unicode.org/reports/tr15/#Introduction
+        """
         num = ord(char)
-        return ((64 < num < 91) or  # A-Z
-                (96 < num < 123) or  # a-z
-                (47 < num < 58) or  # 0-9
-                (char == '_')  # _
-                )
+        # [A-Za-z_]
+        return (64 < num < 91) or (96 < num < 123) or (char == "_")
+
+    def is_identifier_remainder(char):
+        """
+        TODO: Check if a character is of the following Unicode categories:
+            Lu, Ll, Lt, Lm, Lo, Nl, Mn, Mc, Nd, Pc, _
+
+        TODO: Normalize (using NFKC normalization form)
+        the codepoints
+
+        https://unicode.org/reports/tr15/#Introduction
+        """
+        num = ord(char)
+        return Lexer.is_identifier_start(char) or (47 < num < 58)
+
+    def is_string_prefix_next(
+        self, char, one_letter_prefixes=[], two_letter_prefixes=[]
+    ):
+        """
+        Checks and next set of bytes starts a prefixed string
+        """
+        next_char = self.peek_char()
+        next_char2 = self.peek_char(2)
+        prefix_data = None
+        delimiter_token = None
+
+        one_letter_prefix = char
+        two_letter_prefix = (
+            char + next_char if char is not None and next_char is not None else None
+        )
+
+        if one_letter_prefix in one_letter_prefixes and (
+            next_char == '"' or next_char == "'"
+        ):
+            prefix_data = {"prefix": one_letter_prefix}
+            delimiter_token = self.peek_token(1, 4)
+
+        elif two_letter_prefix in two_letter_prefixes and (
+            next_char2 == '"' or next_char2 == "'"
+        ):
+            prefix_data = {"prefix": two_letter_prefix}
+            delimiter_token = self.peek_token(2, 5)
+
+        if delimiter_token:
+            prefix_data["delim"] = (
+                delimiter_token
+                if (delimiter_token == '"""') or (delimiter_token == "'''")
+                else delimiter_token[0]
+            )
+
+        return prefix_data
 
     def lex(self):
         """ Breaks code string into tokens that the parser can digest """
@@ -114,34 +207,147 @@ class Lexer:
 
         # Loops through each character in the code.
         while char:
-            row, column = self.row, self.column
+            prefixed_string = self.is_string_prefix_next(
+                char,
+                one_letter_prefixes=["r", "u", "R", "U", "f", "F"],
+                two_letter_prefixes=["fr", "Fr", "fR", "FR", "rf", "rF", "Rf", "RF"],
+            )
+
+            prefixed_byte_string = self.is_string_prefix_next(
+                char,
+                one_letter_prefixes=["b", "B"],
+                two_letter_prefixes=["br", "Br", "bR", "BR", "rb", "rB", "Rb", "RB"],
+            )
 
             # We check each character in the code and categorize it
-            if char == '\r':  # character is a NEWLINE
-                if self.peek_char() == '\n':
-                    self.eat_char()
+            if char == "\r" or char == "\n":
+                """
+                ========= NEWLINE =========
 
-                tokens.append(Token('', TokenKind.NEWLINE, row, column))
+                NOTE: \r\n is handled by eat_char method.
+                """
+                tokens.append(Token("", TokenKind.NEWLINE, *self.get_row_column()))
 
-            elif char == '\n':  # character is a NEWLINE
-                tokens.append(Token('', TokenKind.NEWLINE, row, column))
+            elif prefixed_string:
+                """
+                ========= PREFIXED STRING =========
+                """
+                prefix, delimiter = prefixed_string["prefix"], prefixed_string["delim"]
 
-            elif Lexer.is_identifier_start(char):  # character is an IDENTIFIER
+                # Consume delimiter
+                self.eat_token((prefix[1:] if len(prefix) > 1 else "") + delimiter)
+
+                # Get the stingf content
+                string = self.lex_string(delimiter)
+
+                tokens.append(
+                    Token(string, TokenKind.PREFIXED_STRING, *self.get_row_column())
+                )
+
+            elif prefixed_byte_string:
+                """
+                ========= PREFIXED BYTE STRING =========
+                """
+                prefix, delimiter = (
+                    prefixed_byte_string["prefix"],
+                    prefixed_byte_string["delim"],
+                )
+
+                # Consume delimiter
+                self.eat_token((prefix[1:] if len(prefix) > 1 else "") + delimiter)
+
+                # Get the stingf content
+                string = self.lex_string(delimiter, is_byte_string=True)
+
+                tokens.append(
+                    Token(string, TokenKind.PREFIXED_STRING, *self.get_row_column())
+                )
+
+            elif (char == "'" and self.peek_token(1, 3) == "''") or (
+                char == '"' and self.peek_token(1, 3) == '""'
+            ):
+                """
+                ========= LONG STRING =========
+                """
+                string = self.lex_string(char + self.eat_token(char * 2))
+
+                tokens.append(Token(string, TokenKind.STRING, *self.get_row_column()))
+
+            elif char == "'" or char == '"':
+                """
+                ========= SHORT STRING =========
+                """
+                string = self.lex_string(char)
+
+                tokens.append(Token(string, TokenKind.STRING, *self.get_row_column()))
+
+            elif Lexer.is_identifier_start(char):
+                """
+                ========= IDENTIFIER =========
+                """
                 token = char
-                peeked_char = self.peek_char()
+                next_char = self.peek_char()
 
-                while peeked_char and Lexer.is_identifier_mid(peeked_char):
+                while next_char and Lexer.is_identifier_remainder(next_char):
                     token += self.eat_char()
 
                     # Peek at the next character in code.
-                    peeked_char = self.peek_char()
+                    next_char = self.peek_char()
 
-                tokens.append(Token(token, TokenKind.IDENTIFIER, row, column))
+                tokens.append(
+                    Token(token, TokenKind.IDENTIFIER, *self.get_row_column())
+                )
 
-            # elif ...:  # ...
-            # print('>>>', peeked_char)
+            else:
+                raise LexerError(
+                    f"Encountered unexpected character: {repr(char)}",
+                    *self.get_row_column(),
+                )
 
             # Consume the next character in code.
             char = self.eat_char()
 
         return tokens
+
+    def lex_string(self, delimiter, is_byte_string=False):
+        """
+        Using provided delimiter, returns the sequence of UTF8 codepoints between
+        those delimiters
+
+        TODO: Make it UTF8 compliant.
+        TODO: Handle escape sequence.
+        """
+        is_long_string = delimiter == "'''" or delimiter == '"""'
+        token = ""
+
+        while True:
+            row, column = self.row, self.column
+            char = self.eat_char()
+
+            # Make some necessary sanity checks on character
+            if char is None:
+                raise LexerError(
+                    "Unexpected end of string. Closing delimiter not found", row, column
+                )
+            elif is_byte_string and not (-1 < ord(char) < 128):
+                raise LexerError(
+                    f"Encountered unexpected non-ASCII character: {repr(char)}", row, column
+                )
+            elif not is_long_string and (char == "\n" or char == "\r"):
+                raise LexerError(
+                    "Encountered unexpected newline character", row, column
+                )
+
+            # Check for closing long_string delimiter
+            if is_long_string and (
+                char == delimiter[0] and self.eat_token(delimiter[1:])
+            ):
+                break
+
+            # Check for closing short_string delimiter
+            if not is_long_string and char == delimiter:
+                break
+
+            token += char
+
+        return token

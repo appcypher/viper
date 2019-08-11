@@ -2,5 +2,89 @@ newline =
     | '\r' '\n'?
     | '\n'
 
-identifer =
+identifer = // TODO: Define valid identifier characters
     | [A-Za-z_][A-Za-z0-9_]*
+
+string_literal =
+    | string_prefix? (short_string | long_string)
+
+string_prefix =
+    | "r"
+    | "u"
+    | "R"
+    | "U"
+    | "f"
+    | "F"
+    | "fr"
+    | "Fr"
+    | "fR"
+    | "FR"
+    | "rf"
+    | "rF"
+    | "Rf"
+    | "RF"
+
+short_string =
+    | "'" short_string_item* "'"
+    | '"' short_string_item* '"'
+
+long_string =
+    | "'''" long_string_item* "'''"
+    | '"""' long_string_item* '"""'
+
+short_string_item =
+    | short_string_char
+    | string_escape_seq
+
+long_string_item  =
+    | long_string_char
+    | string_escape_seq
+
+short_string_char = // TODO: Define valid source characters or perhaps ignore
+    | <any source character except "\" or newline or the quote>
+
+long_string_char = // TODO: Define valid source characters or perhaps ignore
+    | <any source character except "\">
+
+string_escape_seq = // TODO: Define valid source characters or perhaps ignore
+    | "\" <any source character>
+
+bytes_literal =
+    | bytes_prefix (short_bytes | long_bytes)
+
+bytes_prefix =
+    | "b"
+    | "B"
+    | "br"
+    | "Br"
+    | "bR"
+    | "BR"
+    | "rb"
+    | "rB"
+    | "Rb"
+    | "RB"
+
+short_bytes =
+    | "'" short_bytes_item* "'"
+    | '"' short_bytes_item* '"'
+
+long_bytes =
+    | "'''" long_bytes_item* "'''"
+    | '"""' long_bytes_item* '"""'
+
+short_bytes_item =
+    | short_bytes_char
+    | bytes_escape_seq
+
+long_bytes_item  =
+    | long_bytes_char
+    | bytes_escape_seq
+
+short_bytes_char =  // TODO: Define valid source characters or perhaps ignore
+    | <any ASCII character except "\" or newline or the quote>
+
+long_bytes_char =  // TODO: Define valid source characters or perhaps ignore
+    | <any ASCII character except "\">
+
+bytes_escape_seq =  // TODO: Define valid source characters or perhaps ignore
+    | "\" <any ASCII character>
