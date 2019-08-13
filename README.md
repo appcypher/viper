@@ -23,5 +23,5 @@ Semantic compatibility with CPython isn't a goal. For example, Viper represents 
 
 ## Possible CLI
 ```sh
-viper sample.vy
+viper sample.vi
 ```
