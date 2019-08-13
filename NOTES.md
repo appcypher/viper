@@ -18,7 +18,7 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
     - A function, in Viper implementation parlance, is a regular function, a method, a closure or an operator.
     - Every object has a structure and classes are how we describe or classify those structures. We only think in terms of classes when we need to compare an object's structure with a class' blueprint structure.
     - Inheritance / variance is an abstraction we only care about for validation/type-checking purposes. Relationship between objects are only seen in terms of how similar their structures are.
-    - Global variables are variables that persist throughout lifetime of the program. Global variables include typical global variables declared at the top-level, class fields and variables from a parent scope referenced by a closure.
+    - Global variables are variables that persist throughout the lifetime of a program. Global variables include variables declared at the top-level, class fields and variables from a parent scope referenced by a closure.
 
 - Analysis artifacts
 
@@ -545,16 +545,15 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
         print(num) # -4_611_686_018_427_387_903
         ```
 
-- StopIteration
+- StopIteration and KeyError
 
-    - Using StopIteration error as an indication of an exhausted iterable
+    - Exception handling as a means of control flow is expensive.
         ```py
         for i in range(10):
             print(25)
         ```
 
-        Viper optimizes raising StopIteration errors away in for loops.
-
+        Viper optimizes StopIteration and KeyError exception handlers where possible.
 
 - Concurrency
 
@@ -585,6 +584,7 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
         """
         ERROR
 
+        import sys.settrace
         sys.settrace(value_changer)
         """
         ```
@@ -608,6 +608,55 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
 
     - Viper has different scoping rule. `if-elif-else`, `for-else`, `try-except-ensure` and `while-else` blocks all have their own scopes
 
+- Literal
+
+    - Viper does not support upper case letters to signify literal base
+        ```py
+        bin_n = 0b10101
+        oct_n = 0o17867
+        hex_n = 0x1FFFE
+
+        """
+        ERROR
+
+        bin_n = 0B10101
+        oct_n = 0O17867
+        hex_n = 0X1FFFE
+        """
+        ```
+
+    - Viper doesn't support the wide entire uppercase / reversed prefixes Python support in prefix strings.
+        ```py
+        r"Hello"
+        u"Hello"
+        f"Hello"
+        b"Hello"
+        rb"Hello"
+        rf"Hello"
+
+        """
+        ERROR
+
+        R"Hello"
+        U"Hello"
+        F"Hello"
+        B"Hello"
+        rB"Hello"
+        Rb"Hello"
+        RB"Hello"
+        rF"Hello"
+        Rf"Hello"
+        RF"Hello"
+        """
+        ```
+
+    - Viper uses `im` for imaginary numbers
+        ```py
+        imag = 3 + 4im
+        ```
+
+        - Instead of the 'j' suffix, Viper expects a 'im' suffix
+
 ## CODE GENERATION
 
 - WebAssembly
@@ -615,6 +664,24 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
 ## STANDARD LIBRARY
 
 ## POSSIBLE ADDITIONS
+
+- Character
+    ```py
+    ch0 = `a
+    ch1 = `\n
+    ch2 = `\uff
+    ch3 = `\890
+
+    string = ch0 + ch1
+
+    if `a <= ch <= `z:
+        print(ch)
+    ```
+
+- Regex literal
+    ```js
+    regex = /\d+/
+    ```
 
 - Type annotation revamp
     ```py
@@ -669,11 +736,22 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
 
 - None handling
     ```py
-    def get_optional() -> int?:
-        return None
+    def get_optional() -> char?:
+
 
     if identity := get_optional():
         print(identity)
+
+    ch = get_optional()
+
+    """
+    ERROR
+
+    ord(ch) # ord function exists for char but not None
+    """
+
+    codepoint = ord(ch) if ch else None
+    codepoint = ord(ch?)
     ```
 
 - Algebraic data types
@@ -735,11 +813,12 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
 - `const` keyword
     ```py
     const pi = 3.141
-    ```
 
-- Regex literal
-    ```js
-    regex = /\d+/
+    def map(const array, const f):
+        t = []
+        for i in array:
+            t.append(f(i))
+        return t
     ```
 
 - New versions of certain functions and objects by default
@@ -801,11 +880,10 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
     ```py
     match x:
         Person(name, age) => 1
-        [x, y = 5, z: int] => y
-        [x, y = 5, z: str] => y
+        [x, y = 5, z] => y
         (x, y = 5, 10, *z) => x
         {x, y = 5, 10, *z} => x
-        dict { x, y['y'],  *z} => x
+        { x: 'x', y: 'y',  *z} => x
         10 or 11 and 12 => x
         0:89 => 10
         * => 11
@@ -855,7 +933,29 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
     hello_macro!(foo, [1, 2, 3])
     ```
 
+    Syntax may clash with format specifiers !r, !s, !a.
+
+    ```py
+    f"He said his name is {name!r}."
+    ```
+
     NOTE: Susceptible to change.
+
+- Coefficient expression
+    ```py
+    n = 4
+    2n
+    (2)n
+    2(n)
+    ```
+
+- Hexadecimal, Binary and Octal Floating point literal
+    ```py
+    decf = 12.3e+1
+    hexf = 0x1f.3e+1
+    octf = 0o16.3e+1
+    binf = 0b11.3e+1
+    ```
 
 ## GARBAGE COLLECTION
 In Swift, variables are deallocated in their declaration stack frames or parents of that. Never a child frame of the declaration scope. Viper takes a similar approach.
