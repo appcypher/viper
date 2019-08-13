@@ -1,6 +1,6 @@
 newline =
-    | '\r' '\n'?
-    | '\n'
+    | "\r" "\n"?
+    | "\n"
 
 identifer = // TODO: Define valid identifier characters
     | [A-Za-z_][A-Za-z0-9_]*
@@ -11,18 +11,8 @@ string_literal =
 string_prefix =
     | "r"
     | "u"
-    | "R"
-    | "U"
     | "f"
-    | "F"
-    | "fr"
-    | "Fr"
-    | "fR"
-    | "FR"
     | "rf"
-    | "rF"
-    | "Rf"
-    | "RF"
 
 short_string =
     | "'" short_string_item* "'"
@@ -54,15 +44,7 @@ bytes_literal =
 
 bytes_prefix =
     | "b"
-    | "B"
-    | "br"
-    | "Br"
-    | "bR"
-    | "BR"
     | "rb"
-    | "rB"
-    | "Rb"
-    | "RB"
 
 short_bytes =
     | "'" short_bytes_item* "'"
@@ -80,11 +62,71 @@ long_bytes_item  =
     | long_bytes_char
     | bytes_escape_seq
 
-short_bytes_char =  // TODO: Define valid source characters or perhaps ignore
+short_bytes_char =
     | <any ASCII character except "\" or newline or the quote>
 
-long_bytes_char =  // TODO: Define valid source characters or perhaps ignore
+long_bytes_char =
     | <any ASCII character except "\">
 
-bytes_escape_seq =  // TODO: Define valid source characters or perhaps ignore
+bytes_escape_seq =
     | "\" <any ASCII character>
+
+integer =
+    | dec_integer
+    | bin_integer
+    | oct_integer
+    | hex_integer
+
+dec_integer =
+    | non_zero_digit ("_"? digit)*
+    | "0"+ ("_"? "0")*
+
+bin_integer =
+    | "0b" ("_"? bin_digit)+
+
+oct_integer =
+    | "0o" ("_"? oct_digit)+
+
+hex_integer =
+    | "0x" ("_"? hex_digit)+
+
+nonzerodigit =
+    | [1-9]
+
+digit =
+    | [0-9]
+
+bin_digit =
+    | "0"
+    | "1"
+
+oct_digit =
+    | [0-7]
+
+hex_digit =
+    | digit
+    | [a-f]
+    | [A-F]
+
+float_number =
+    | point_float
+    | exponent_float
+
+point_float =
+    | digit_part? fraction
+    | digit_part "."
+
+exponent_float =
+    | (digit_part | point_float) exponent
+
+digit_part =
+    | digit ("_"? digit)*
+
+fraction =
+    | "." digit_part
+
+exponent =
+    | "e" ("+" | "-")? digit_part
+
+imag_number =
+    | (float_number | digit_part) "im"
