@@ -7,6 +7,11 @@ def test_lexer_tokenizes_identifier_that_starts_with_underscore_as_identifier():
     assert result == [Token(r"_hello", TokenKind.IDENTIFIER, 0, 5)]
 
 
+def test_lexer_tokenizes_identifier_that_starts_with_letter_as_identifier():
+    result = Lexer("raw").lex()
+    assert result == [Token(r"raw", TokenKind.IDENTIFIER, 0, 2)]
+
+
 def test_lexer_tokenizes_identifier_with_digits_in_middle_as_identifier():
     result = Lexer(r"_hello88_").lex()
     assert result == [Token("_hello88_", TokenKind.IDENTIFIER, 0, 8)]
@@ -238,12 +243,12 @@ def test_lexer_fails_with_unclosed_delimiter_for_long_byte_string():
 def test_lexer_tokenizes_valid_dec_integer_successfully():
     result0 = Lexer("0123456789").lex()
     result1 = Lexer("123456789").lex()
-    result2 = Lexer("01_23456_789").lex()
-    result3 = Lexer("5_37450_899").lex()
+    result2 = Lexer("01_33456_789").lex()
+    result3 = Lexer("5_37450_99").lex()
     assert result0 == [Token("0123456789", TokenKind.DEC_INTEGER, 0, 9)]
     assert result1 == [Token("123456789", TokenKind.DEC_INTEGER, 0, 8)]
-    assert result2 == [Token("0123456789", TokenKind.DEC_INTEGER, 0, 11)]
-    assert result3 == [Token("537450899", TokenKind.DEC_INTEGER, 0, 10)]
+    assert result2 == [Token("0133456789", TokenKind.DEC_INTEGER, 0, 11)]
+    assert result3 == [Token("53745099", TokenKind.DEC_INTEGER, 0, 9)]
 
 
 def test_lexer_tokenizes_valid_hex_integer_successfully():
@@ -336,14 +341,87 @@ def test_lexer_fails_with_consecutive_underscores_in_integer_literal():
     )
 
 
-def test_lexer_fails_with_trailing_underscore_in_integer_literal():
-    lexer0 = Lexer("0o1_000_")
-    lexer1 = Lexer("0b1_000_")
-    lexer2 = Lexer("0x1_000_")
-    lexer3 = Lexer("1_000_")
-    lexer4 = Lexer("0o_")
-    lexer5 = Lexer("0b_")
-    lexer6 = Lexer("0x_")
+def test_lexer_tokenizes_coefficient_expression_with_adjacent_number_and_identifier_successfully():
+    result0 = Lexer("045_").lex()
+    result1 = Lexer("123f").lex()
+    result2 = Lexer("1_234e_00").lex()
+    result3 = Lexer("1_000_500r_ac").lex()
+
+    assert result0 == [
+        Token("045", TokenKind.DEC_INTEGER, 0, 2),
+        Token("*", TokenKind.OPERATOR, 0, 2),
+        Token("_", TokenKind.IDENTIFIER, 0, 3),
+    ]
+
+    assert result1 == [
+        Token("123", TokenKind.DEC_INTEGER, 0, 2),
+        Token("*", TokenKind.OPERATOR, 0, 2),
+        Token("f", TokenKind.IDENTIFIER, 0, 3),
+    ]
+
+    assert result2 == [
+        Token("1234", TokenKind.DEC_INTEGER, 0, 4),
+        Token("*", TokenKind.OPERATOR, 0, 4),
+        Token("e_00", TokenKind.IDENTIFIER, 0, 8),
+    ]
+
+    assert result3 == [
+        Token("1000500", TokenKind.DEC_INTEGER, 0, 8),
+        Token("*", TokenKind.OPERATOR, 0, 8),
+        Token("r_ac", TokenKind.IDENTIFIER, 0, 12),
+    ]
+
+
+def test_lexer_tokenizes_valid_dec_float_literal_successfully():
+    result0 = Lexer("0123.456789").lex()
+    result1 = Lexer(".00").lex()
+    result2 = Lexer(".12_34").lex()
+    result3 = Lexer(".12_34e-100").lex()
+    result4 = Lexer("1_234e00").lex()
+    result5 = Lexer("1234.").lex()
+    result6 = Lexer("1234.e-56789").lex()
+    result7 = Lexer("12_34.5_67e+8_900").lex()
+    result8 = Lexer("00.1_23456_789").lex()
+    assert result0 == [Token("0123.456789", TokenKind.DEC_FLOAT, 0, 10)]
+    assert result1 == [Token("0.00", TokenKind.DEC_FLOAT, 0, 2)]
+    assert result2 == [Token("0.1234", TokenKind.DEC_FLOAT, 0, 5)]
+    assert result3 == [Token("0.1234e-100", TokenKind.DEC_FLOAT, 0, 10)]
+    assert result4 == [Token("1234e00", TokenKind.DEC_FLOAT, 0, 7)]
+    assert result5 == [Token("1234.0", TokenKind.DEC_FLOAT, 0, 4)]
+    assert result6 == [Token("1234.0e-56789", TokenKind.DEC_FLOAT, 0, 11)]
+    assert result7 == [Token("1234.567e+8900", TokenKind.DEC_FLOAT, 0, 16)]
+    assert result8 == [Token("00.123456789", TokenKind.DEC_FLOAT, 0, 13)]
+
+
+def test_lexer_tokenizes_valid_code_that_looks_like_dec_float_literal():
+    result0 = Lexer("12_34.e_00").lex()
+    result1 = Lexer("12_34.f100").lex()
+    result2 = Lexer("12_34e_00").lex()
+
+    assert result0 == [
+        Token("1234", TokenKind.DEC_INTEGER, 0, 4),
+        Token(".", TokenKind.DOT, 0, 5),
+        Token("e_00", TokenKind.IDENTIFIER, 0, 9),
+    ]
+
+    assert result1 == [
+        Token("1234", TokenKind.DEC_INTEGER, 0, 4),
+        Token(".", TokenKind.DOT, 0, 5),
+        Token("f100", TokenKind.IDENTIFIER, 0, 9),
+    ]
+
+    assert result2 == [
+        Token("1234", TokenKind.DEC_INTEGER, 0, 4),
+        Token("*", TokenKind.OPERATOR, 0, 4),
+        Token("e_00", TokenKind.IDENTIFIER, 0, 8),
+    ]
+
+
+def test_lexer_fails_with_consecutive_underscores_in_dec_float_literal():
+    lexer0 = Lexer("1_234.0__5")
+    lexer1 = Lexer(".111__0")
+    lexer2 = Lexer("1_23.e-4__5")
+    lexer3 = Lexer("1_23.100e-4__5")
 
     with raises(LexerError) as exc_info0:
         lexer0.lex()
@@ -357,54 +435,26 @@ def test_lexer_fails_with_trailing_underscore_in_integer_literal():
     with raises(LexerError) as exc_info3:
         lexer3.lex()
 
-    with raises(LexerError) as exc_info4:
-        lexer4.lex()
-
-    with raises(LexerError) as exc_info5:
-        lexer5.lex()
-
-    with raises(LexerError) as exc_info6:
-        lexer6.lex()
-
     assert (exc_info0.value.message, exc_info0.value.row, exc_info0.value.column) == (
-        "Unexpected trailing underscore in integer literal",
+        "Unexpected consecutive underscores in floating point literal",
         0,
-        7,
+        8,
     )
 
     assert (exc_info1.value.message, exc_info1.value.row, exc_info1.value.column) == (
-        "Unexpected trailing underscore in integer literal",
-        0,
-        7,
-    )
-
-    assert (exc_info2.value.message, exc_info2.value.row, exc_info2.value.column) == (
-        "Unexpected trailing underscore in integer literal",
-        0,
-        7,
-    )
-
-    assert (exc_info3.value.message, exc_info3.value.row, exc_info3.value.column) == (
-        "Unexpected trailing underscore in integer literal",
+        "Unexpected consecutive underscores in floating point literal",
         0,
         5,
     )
 
-    assert (exc_info4.value.message, exc_info4.value.row, exc_info4.value.column) == (
-        "Unexpected trailing underscore in integer literal",
+    assert (exc_info2.value.message, exc_info2.value.row, exc_info2.value.column) == (
+        "Unexpected consecutive underscores in floating point literal",
         0,
-        2,
+        9,
     )
 
-    assert (exc_info5.value.message, exc_info5.value.row, exc_info5.value.column) == (
-        "Unexpected trailing underscore in integer literal",
+    assert (exc_info3.value.message, exc_info3.value.row, exc_info3.value.column) == (
+        "Unexpected consecutive underscores in floating point literal",
         0,
-        2,
+        12,
     )
-
-    assert (exc_info6.value.message, exc_info6.value.row, exc_info6.value.column) == (
-        "Unexpected trailing underscore in integer literal",
-        0,
-        2,
-    )
-
