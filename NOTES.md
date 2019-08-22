@@ -941,7 +941,7 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
 
     NOTE: Susceptible to change.
 
-- Coefficient expression
+- Coefficient expression [IN PROGRESS]
     ```py
     n = 4
     2n
@@ -949,7 +949,15 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
     2(n)
     ```
 
-- Hexadecimal, Binary and Octal Floating point literal
+- Abritary precision integer and float literal
+    ```py
+    integer = b`123457890123456789012345678901234567890
+    floating: BigFloat = b`123457890123456.789012345678901234e-567890
+
+    type(integer) == BigInteger
+    ```
+
+- Hexadecimal, binary and octal floating point literal
     ```py
     decf = 12.3e+1
     hexf = 0x1f.3e+1
