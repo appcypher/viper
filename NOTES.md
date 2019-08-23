@@ -712,7 +712,8 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
     Person == Person
 
     # Interface (In draft). Similar to Go2's contracts
-    interface Equal{T, U}(Eq) where T > Mammal, U == Person:
+    where!(T > Mammal, U == Person)
+    interface Equal{T, U}(Eq):
         def __eq__(T, U): pass
 
     # Generics
@@ -757,14 +758,16 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
 - Algebraic data types
     ```py
     enum Option{T}:
-        Ok(value: T) | Err() | None
+        Ok(value: T)
+        Err()
+        None
 
-    identity: Option{str} = None
+    identity: Option{str} = Option.None
 
     match identity:
-        Some(value) => value
-        Err() => raise Error()
-        .. => pass
+        Option.Some(value) => value
+        Option.Err() => raise Error()
+        * => pass
 
     identity: int | str = 'XNY7V40'
 
@@ -883,7 +886,7 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
         [x, y = 5, z] => y
         (x, y = 5, 10, *z) => x
         {x, y = 5, 10, *z} => x
-        { x: 'x', y: 'y',  *z} => x
+        { x: 'x', y: 'y',  **z} => x
         10 or 11 and 12 => x
         0:89 => 10
         * => 11
