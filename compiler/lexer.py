@@ -44,13 +44,15 @@ class TokenKind(Enum):
 
     IDENTIFIER = 0
     NEWLINE = 1
-    DEC_FLOAT = 3
+    DEC_FLOAT = 2
+    DEC_FLOAT_IMAG = 3
     INDENT = 4
     DEDENT = 5
     PREFIXED_STRING = 6
     BYTE_STRING = 7
     STRING = 8
     DEC_INTEGER = 9
+    DEC_INTEGER_IMAG = 16
     BIN_INTEGER = 10
     OCT_INTEGER = 11
     HEX_INTEGER = 12
@@ -163,6 +165,16 @@ class Lexer:
 
     def get_line_info(self):
         return self.row, self.column
+
+    def get_numeric_prefix(self, token_kind):
+        prefix = ""
+        if token_kind == TokenKind.BIN_INTEGER:
+            prefix = "0b"
+        elif token_kind == TokenKind.OCT_INTEGER:
+            prefix = "0o"
+        elif token_kind == TokenKind.HEX_INTEGER:
+            prefix = "0x"
+        return prefix
 
     def lex(self):
         """ Breaks code string into tokens that the parser can digest """
@@ -349,7 +361,7 @@ class Lexer:
 
             elif Valids.is_identifier_start(char):
                 """
-                ========= IDENTIFIER | OPERATOR | BYTE STRING | PREFIXED STRING =========
+                ========= IDENTIFIER | OPERATOR | BYTE STRING | IMAGINARY | PREFIXED STRING =========
 
                 TODO: Valids.is_identifier_start must check for ASCII first
                 """
@@ -397,6 +409,7 @@ class Lexer:
                     next_char = self.peek_char()
                     prev_char = self.peek_char(-1)
                     prev_codepoint = ord(prev_char) if prev_char else -1
+                    token_kind = TokenKind.IDENTIFIER
 
                     while next_char and Valids.is_identifier_continuation(next_char):
                         token += self.eat_char()
@@ -410,17 +423,40 @@ class Lexer:
                     if (
                         prev_char
                         and not Valids.is_space(prev_char)
-                        and (Valids.is_dec_digit(prev_codepoint) or prev_char == ")")
+                        and (Valids.is_hex_digit(prev_codepoint) or prev_char == ")")
                     ):
-                        tokens.append(
-                            Token(
-                                "*",
-                                TokenKind.OPERATOR,
-                                *line_info_before_identifier_lexing,
-                            )
-                        )
+                        kind, prev_token = tokens[-1].kind, tokens[-1].data
 
-                    token_kind = TokenKind.IDENTIFIER
+                        # Bin, Oct and Hex integer literals are not allowed to be used in
+                        # coefficient literal
+                        if (
+                            kind == TokenKind.BIN_INTEGER
+                            or kind == TokenKind.OCT_INTEGER
+                            or kind == TokenKind.HEX_INTEGER
+                        ):
+                            raise LexerError(
+                                f"Encountered invalid coefficient literal: "
+                                f"{repr(self.get_numeric_prefix(kind)+ prev_token + token)}",
+                                *self.get_line_info(),
+                            )
+
+                        if token == "im":  # Mutate previous token
+                            prev_token = tokens.pop()
+                            token = prev_token.data
+                            token_kind = (
+                                TokenKind.DEC_INTEGER_IMAG
+                                if prev_token.kind == TokenKind.DEC_INTEGER
+                                else TokenKind.DEC_FLOAT_IMAG
+                            )
+
+                        else:
+                            tokens.append(
+                                Token(
+                                    "*",
+                                    TokenKind.OPERATOR,
+                                    *line_info_before_identifier_lexing,
+                                )
+                            )
 
                 tokens.append(Token(token, token_kind, *self.get_line_info()))
 

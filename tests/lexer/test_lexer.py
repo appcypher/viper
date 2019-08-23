@@ -346,6 +346,7 @@ def test_lexer_tokenizes_coefficient_expression_with_adjacent_number_and_identif
     result1 = Lexer("123f").lex()
     result2 = Lexer("1_234e_00").lex()
     result3 = Lexer("1_000_500r_ac").lex()
+    result3 = Lexer("1_000.500r_ac").lex()
 
     assert result0 == [
         Token("045", TokenKind.DEC_INTEGER, 0, 2),
@@ -366,7 +367,7 @@ def test_lexer_tokenizes_coefficient_expression_with_adjacent_number_and_identif
     ]
 
     assert result3 == [
-        Token("1000500", TokenKind.DEC_INTEGER, 0, 8),
+        Token("1000.500", TokenKind.DEC_FLOAT, 0, 8),
         Token("*", TokenKind.OPERATOR, 0, 8),
         Token("r_ac", TokenKind.IDENTIFIER, 0, 12),
     ]
@@ -393,7 +394,7 @@ def test_lexer_tokenizes_valid_dec_float_literal_successfully():
     assert result8 == [Token("00.123456789", TokenKind.DEC_FLOAT, 0, 13)]
 
 
-def test_lexer_tokenizes_valid_code_that_looks_like_dec_float_literal():
+def test_lexer_tokenizes_valid_code_that_looks_like_dec_float_literal_successfully():
     result0 = Lexer("12_34.e_00").lex()
     result1 = Lexer("12_34.f100").lex()
     result2 = Lexer("12_34e_00").lex()
@@ -458,3 +459,43 @@ def test_lexer_fails_with_consecutive_underscores_in_dec_float_literal():
         0,
         12,
     )
+
+
+def test_lexer_fails_with_coefficient_literal_on_non_dec_numeric_literal():
+    lexer0 = Lexer("0b1_110f")
+    lexer1 = Lexer("0x1234fereef")
+    lexer2 = Lexer("0o23_347good")
+
+    with raises(LexerError) as exc_info0:
+        lexer0.lex()
+
+    with raises(LexerError) as exc_info1:
+        lexer1.lex()
+
+    with raises(LexerError) as exc_info2:
+        lexer2.lex()
+
+    assert (exc_info0.value.message, exc_info0.value.row, exc_info0.value.column) == (
+        "Encountered invalid coefficient literal: '0b1110f'",
+        0,
+        7,
+    )
+
+    assert (exc_info1.value.message, exc_info1.value.row, exc_info1.value.column) == (
+        "Encountered invalid coefficient literal: '0x1234fereef'",
+        0,
+        11,
+    )
+
+    assert (exc_info2.value.message, exc_info2.value.row, exc_info2.value.column) == (
+        "Encountered invalid coefficient literal: '0o23347good'",
+        0,
+        11,
+    )
+
+
+def test_lexer_tokenizes_valid_dec_imaginary_literal_successfully():
+    result0 = Lexer("1_234.0_5im").lex()
+    result1 = Lexer("1_234im").lex()
+    assert result0 == [Token("1234.05", TokenKind.DEC_FLOAT_IMAG, 0, 10)]
+    assert result1 == [Token("1234", TokenKind.DEC_INTEGER_IMAG, 0, 6)]
