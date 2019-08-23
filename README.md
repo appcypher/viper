@@ -9,19 +9,38 @@
 
 
 ## Introduction
-Viper is a compiler that compiles a restricted subset of Python to WebAssembly. Viper supports Python 3.x syntax.
+Viper is a restricted subset of Python 3.x (with extra features) amenable to static analysis. The repository both defines the spec of the language and contains a canonical implementation of the compiler, which compiles a legal Viper code to WebAssembly.
 
-## How does this differ from RPython, Nuitka or MicroPython
-MicroPython is a well-optimized Python interpreter (with some JIT support) while Nuitka compiles Python to C. These two projects still allow dynamic aspects of Python, which means their performances will typically not reach the level of statically-typed languages.
+There are other similarly oriented projects, but they are all objectively different from Viper.
 
-RPython, on the other hand, is similar to this project, but the developers have [made it clear](https://rpython.readthedocs.io/en/latest/faq.html#do-i-have-to-rewrite-my-programs-in-rpython) several times their goal is not to make RPython a standalone language.
+MicroPython is a well-optimized Python interpreter (with some JIT support) while Nuitka compiles Python to C. These two projects still allow dynamic aspects of Python, which means their performances may suffer from dynamically-written code.
 
+And unlike Nim, Boo and Cobra, Viper tries to stick to Python syntax and semantics as much as possible and wherever it makes sense.
+
+RPython is quite similar to this project, but the developers have [made it clear](https://rpython.readthedocs.io/en/latest/faq.html#do-i-have-to-rewrite-my-programs-in-rpython) several times their goal is not to make RPython a standalone language.
+
+## Setting Up Development Environment
+- [Install pipenv](https://docs.pipenv.org/en/latest/install/#installing-pipenv)
+
+- Install dependencies
+
+    ```sh
+    pipenv install
+    ```
+
+- Run tests
+
+    ```sh
+    pipenv run pytest
+    ```
 
 ## Non-goals
 Semantic compatibility with CPython isn't a goal. For example, Viper represents `int`s as 64-bit integers.
 
 
-## Possible CLI
-```sh
-viper sample.vi
-```
+## Proposed CLI
+- Run a viper source file
+
+    ```sh
+    viper sample.vi
+    ```
