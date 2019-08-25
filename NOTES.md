@@ -963,9 +963,14 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
 - Hexadecimal, binary and octal floating point literal
     ```py
     decf = 12.3e+1
-    hexf = 0x1f.3e+1
+    hexf = 0x1f.3p+1
     octf = 0o16.3e+1
     binf = 0b11.3e+1
+    ```
+
+- Change the semantics of ^ to mean power and deprecate **
+    ```py
+    2 ^ 5 == 25
     ```
 
 ## GARBAGE COLLECTION
