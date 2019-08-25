@@ -401,13 +401,13 @@ def test_lexer_tokenizes_valid_code_that_looks_like_dec_float_literal_successful
 
     assert result0 == [
         Token("1234", TokenKind.DEC_INTEGER, 0, 4),
-        Token(".", TokenKind.DOT, 0, 5),
+        Token(".", TokenKind.DELIMITER, 0, 5),
         Token("e_00", TokenKind.IDENTIFIER, 0, 9),
     ]
 
     assert result1 == [
         Token("1234", TokenKind.DEC_INTEGER, 0, 4),
-        Token(".", TokenKind.DOT, 0, 5),
+        Token(".", TokenKind.DELIMITER, 0, 5),
         Token("f100", TokenKind.IDENTIFIER, 0, 9),
     ]
 
@@ -499,3 +499,118 @@ def test_lexer_tokenizes_valid_dec_imaginary_literal_successfully():
     result1 = Lexer("1_234im").lex()
     assert result0 == [Token("1234.05", TokenKind.DEC_FLOAT_IMAG, 0, 10)]
     assert result1 == [Token("1234", TokenKind.DEC_INTEGER_IMAG, 0, 6)]
+
+
+def test_lexer_tokenizes_valid_operator_successfully():
+    result0 = Lexer("+").lex()
+    result1 = Lexer("-").lex()
+    result2 = Lexer("*").lex()
+    result3 = Lexer("**").lex()
+    result4 = Lexer("/").lex()
+    result5 = Lexer("//").lex()
+    result6 = Lexer("%").lex()
+    result8 = Lexer("<<").lex()
+    result9 = Lexer(">>").lex()
+    result10 = Lexer("&").lex()
+    result11 = Lexer("|").lex()
+    result12 = Lexer("^").lex()
+    result13 = Lexer("~").lex()
+    result14 = Lexer("<").lex()
+    result15 = Lexer(">").lex()
+    result16 = Lexer("<=").lex()
+    result17 = Lexer(">=").lex()
+    result18 = Lexer("==").lex()
+    result19 = Lexer("!=").lex()
+
+    assert result0 == [Token("+", TokenKind.OPERATOR, 0, 0)]
+    assert result1 == [Token("-", TokenKind.OPERATOR, 0, 0)]
+    assert result2 == [Token("*", TokenKind.OPERATOR, 0, 0)]
+    assert result3 == [Token("**", TokenKind.OPERATOR, 0, 1)]
+    assert result4 == [Token("/", TokenKind.OPERATOR, 0, 0)]
+    assert result5 == [Token("//", TokenKind.OPERATOR, 0, 1)]
+    assert result6 == [Token("%", TokenKind.OPERATOR, 0, 0)]
+    assert result8 == [Token("<<", TokenKind.OPERATOR, 0, 1)]
+    assert result9 == [Token(">>", TokenKind.OPERATOR, 0, 1)]
+    assert result10 == [Token("&", TokenKind.OPERATOR, 0, 0)]
+    assert result11 == [Token("|", TokenKind.OPERATOR, 0, 0)]
+    assert result12 == [Token("^", TokenKind.OPERATOR, 0, 0)]
+    assert result13 == [Token("~", TokenKind.OPERATOR, 0, 0)]
+    assert result14 == [Token("<", TokenKind.OPERATOR, 0, 0)]
+    assert result15 == [Token(">", TokenKind.OPERATOR, 0, 0)]
+    assert result16 == [Token("<=", TokenKind.OPERATOR, 0, 1)]
+    assert result17 == [Token(">=", TokenKind.OPERATOR, 0, 1)]
+    assert result18 == [Token("==", TokenKind.OPERATOR, 0, 1)]
+    assert result19 == [Token("!=", TokenKind.OPERATOR, 0, 1)]
+
+
+def test_lexer_tokenizes_valid_delimiter_successfully():
+    result0 = Lexer("(").lex()
+    result1 = Lexer(")").lex()
+    result2 = Lexer("[").lex()
+    result3 = Lexer("]").lex()
+    result4 = Lexer("{").lex()
+    result5 = Lexer("}").lex()
+    result6 = Lexer(",").lex()
+    result8 = Lexer(":").lex()
+    result9 = Lexer(".").lex()
+    result10 = Lexer(";").lex()
+    result11 = Lexer("@").lex()
+    result12 = Lexer("=").lex()
+    result13 = Lexer("->").lex()
+    result14 = Lexer("+=").lex()
+    result15 = Lexer("-=").lex()
+    result16 = Lexer("*=").lex()
+    result17 = Lexer("/=").lex()
+    result18 = Lexer("//=").lex()
+    result19 = Lexer("%=").lex()
+    result20 = Lexer("@=").lex()
+    result21 = Lexer("&=").lex()
+    result22 = Lexer("|=").lex()
+    result23 = Lexer("^=").lex()
+    result24 = Lexer(">>=").lex()
+    result25 = Lexer("<<=").lex()
+    result26 = Lexer("**=").lex()
+
+    assert result0 == [Token("(", TokenKind.DELIMITER, 0, 0)]
+    assert result1 == [Token(")", TokenKind.DELIMITER, 0, 0)]
+    assert result2 == [Token("[", TokenKind.DELIMITER, 0, 0)]
+    assert result3 == [Token("]", TokenKind.DELIMITER, 0, 0)]
+    assert result4 == [Token("{", TokenKind.DELIMITER, 0, 0)]
+    assert result5 == [Token("}", TokenKind.DELIMITER, 0, 0)]
+    assert result6 == [Token(",", TokenKind.DELIMITER, 0, 0)]
+    assert result8 == [Token(":", TokenKind.DELIMITER, 0, 0)]
+    assert result9 == [Token(".", TokenKind.DELIMITER, 0, 0)]
+    assert result10 == [Token(";", TokenKind.DELIMITER, 0, 0)]
+    assert result11 == [Token("@", TokenKind.DELIMITER, 0, 0)]
+    assert result12 == [Token("=", TokenKind.DELIMITER, 0, 0)]
+    assert result13 == [Token("->", TokenKind.DELIMITER, 0, 1)]
+    assert result14 == [Token("+=", TokenKind.DELIMITER, 0, 1)]
+    assert result15 == [Token("-=", TokenKind.DELIMITER, 0, 1)]
+    assert result16 == [Token("*=", TokenKind.DELIMITER, 0, 1)]
+    assert result17 == [Token("/=", TokenKind.DELIMITER, 0, 1)]
+    assert result18 == [Token("//=", TokenKind.DELIMITER, 0, 2)]
+    assert result19 == [Token("%=", TokenKind.DELIMITER, 0, 1)]
+    assert result20 == [Token("@=", TokenKind.DELIMITER, 0, 1)]
+    assert result21 == [Token("&=", TokenKind.DELIMITER, 0, 1)]
+    assert result22 == [Token("|=", TokenKind.DELIMITER, 0, 1)]
+    assert result23 == [Token("^=", TokenKind.DELIMITER, 0, 1)]
+    assert result24 == [Token(">>=", TokenKind.DELIMITER, 0, 2)]
+    assert result25 == [Token("<<=", TokenKind.DELIMITER, 0, 2)]
+    assert result26 == [Token("**=", TokenKind.DELIMITER, 0, 2)]
+
+
+def test_lexer_fails_with_single_exclamation_mark():
+    lexer = Lexer('!')
+    with raises(LexerError) as exc_info:
+        lexer.lex()
+
+    assert (exc_info.value.message, exc_info.value.row, exc_info.value.column) == (
+        "Encountered unexpected character: '!'",
+        0,
+        0,
+    )
+
+def test_lexer_tokenizes_():
+    result0 = Lexer("(").lex()
+
+    assert result0 == [Token("(", TokenKind.DELIMITER, 0, 0)]

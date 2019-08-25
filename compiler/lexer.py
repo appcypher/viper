@@ -1,7 +1,7 @@
 """ Contains Viper's lexer implementation """
 
 from enum import Enum
-from valids import Valids
+from .valid import Valid
 
 
 class Indentation:
@@ -52,13 +52,12 @@ class TokenKind(Enum):
     BYTE_STRING = 7
     STRING = 8
     DEC_INTEGER = 9
-    DEC_INTEGER_IMAG = 16
-    BIN_INTEGER = 10
-    OCT_INTEGER = 11
-    HEX_INTEGER = 12
-    OPERATOR = 13
-    DELIMITER = 14
-    DOT = 15
+    DEC_INTEGER_IMAG = 10
+    BIN_INTEGER = 11
+    OCT_INTEGER = 12
+    HEX_INTEGER = 13
+    OPERATOR = 14
+    DELIMITER = 15
 
 
 class LexerError(Exception):
@@ -220,20 +219,19 @@ class Lexer:
 
             elif char == ".":
                 """
-                ========= DOT | FLOAT =========
+                ========= DELIMITER | FLOAT =========
                 """
                 char = self.peek_char()
                 codepoint = ord(char) if char else -1
                 token = "."
-                token_kind = TokenKind.DOT
+                token_kind = TokenKind.DELIMITER
 
-                # TODO: Abstract out (fraction exponent)
                 # "." digits exponent?
-                if Valids.is_dec_digit(codepoint):
+                if Valid.is_dec_digit(codepoint):
                     token_kind = TokenKind.DEC_FLOAT
 
                     token = "0." + self.lex_digit_part(
-                        Valids.is_dec_digit, "floating point"
+                        Valid.is_dec_digit, "floating point"
                     )
 
                     # Check for exponent section
@@ -243,7 +241,7 @@ class Lexer:
                     codepoint = ord(peek_sign_or_digit) if peek_sign_or_digit else -1
 
                     if peek_e == "e" and (
-                        Valids.is_dec_digit(codepoint)
+                        Valid.is_dec_digit(codepoint)
                         or peek_sign_or_digit == "+"
                         or peek_sign_or_digit == "-"
                     ):
@@ -264,25 +262,25 @@ class Lexer:
                 if char == "x":
                     # HEXADECIMAL
                     self.eat_char()  # Consume the x
-                    token = self.lex_digit_part(Valids.is_hex_digit)
+                    token = self.lex_digit_part(Valid.is_hex_digit)
                     token_kind = TokenKind.HEX_INTEGER
 
                 elif char == "b":
                     # BINARY
                     self.eat_char()  # Consume the b
-                    token = self.lex_digit_part(Valids.is_bin_digit)
+                    token = self.lex_digit_part(Valid.is_bin_digit)
                     token_kind = TokenKind.BIN_INTEGER
 
                 elif char == "o":
                     # OCTAL
                     self.eat_char()  # Consume the o
-                    token = self.lex_digit_part(Valids.is_oct_digit)
+                    token = self.lex_digit_part(Valid.is_oct_digit)
                     token_kind = TokenKind.OCT_INTEGER
 
                 else:
                     # DECIMAL
                     token = self.lex_digit_part(
-                        Valids.is_dec_digit, raise_if_empty=False
+                        Valid.is_dec_digit, raise_if_empty=False
                     )
                     token = "0" + token
 
@@ -296,11 +294,11 @@ class Lexer:
                     codepoint1 = ord(peek2) if peek2 else -1
 
                     if peek0 == "." and (
-                        Valids.is_dec_digit(codepoint0)
+                        Valid.is_dec_digit(codepoint0)
                         or (
                             peek1 == "e"
                             and (
-                                Valids.is_dec_digit(codepoint1)
+                                Valid.is_dec_digit(codepoint1)
                                 or peek2 == "+"
                                 or peek2 == "-"
                             )
@@ -310,7 +308,7 @@ class Lexer:
                         token_kind = TokenKind.DEC_FLOAT
 
                     elif peek0 == "e" and (
-                        Valids.is_dec_digit(codepoint0) or peek1 == "+" or peek1 == "-"
+                        Valid.is_dec_digit(codepoint0) or peek1 == "+" or peek1 == "-"
                     ):
                         token += self.lex_exponent_part()
                         token_kind = TokenKind.DEC_FLOAT
@@ -323,7 +321,7 @@ class Lexer:
 
                 TODO: Validate representable integer and float
                 """
-                token = self.lex_digit_part(Valids.is_dec_digit)
+                token = self.lex_digit_part(Valid.is_dec_digit)
                 token = char + (token if token else "")
                 token_kind = TokenKind.DEC_INTEGER
 
@@ -337,12 +335,12 @@ class Lexer:
                 codepoint1 = ord(peek2) if peek2 else -1
 
                 if peek0 == "." and (
-                    Valids.is_dec_digit(codepoint0)
-                    or (Valids.is_space(peek1) or peek1 == "")
+                    Valid.is_dec_digit(codepoint0)
+                    or (Valid.is_space(peek1) or peek1 == "")
                     or (
                         peek1 == "e"
                         and (
-                            Valids.is_dec_digit(codepoint1)
+                            Valid.is_dec_digit(codepoint1)
                             or peek2 == "+"
                             or peek2 == "-"
                         )
@@ -352,18 +350,94 @@ class Lexer:
                     token_kind = TokenKind.DEC_FLOAT
 
                 elif peek0 == "e" and (
-                    Valids.is_dec_digit(codepoint0) or peek1 == "+" or peek1 == "-"
+                    Valid.is_dec_digit(codepoint0) or peek1 == "+" or peek1 == "-"
                 ):
                     token += self.lex_exponent_part()
                     token_kind = TokenKind.DEC_FLOAT
 
                 tokens.append(Token(token, token_kind, *self.get_line_info()))
+            elif char == "!":
+                """
+                ========= OPERATOR =========
+                """
+                token = char
+                peek_char = self.peek_char()
 
-            elif Valids.is_identifier_start(char):
+                if peek_char != "=":
+                    raise LexerError(
+                        f"Encountered unexpected character: {repr(char)}",
+                        *self.get_line_info(),
+                    )
+                else:
+                    token += self.eat_char()
+
+                tokens.append(Token(token, TokenKind.OPERATOR, *self.get_line_info()))
+
+            elif Valid.is_single_char_operator(char):
+                """
+                ========= OPERATOR | DELIMITER =========
+                """
+                token = char
+                token_kind = TokenKind.OPERATOR
+                peek_char0 = self.peek_char()
+                peek_char1 = self.peek_char(2)
+
+                if (
+                    peek_char0
+                    and peek_char1
+                    and (
+                        (char == "/" and peek_char0 == "/" and peek_char1 == "=")
+                        or (char == ">" and peek_char0 == ">" and peek_char1 == "=")
+                        or (char == "<" and peek_char0 == "<" and peek_char1 == "=")
+                        or (char == "*" and peek_char0 == "*" and peek_char1 == "=")
+                    )
+                ):
+                    token += self.eat_char() + self.eat_char()
+                    token_kind = TokenKind.DELIMITER
+                elif peek_char0 and (
+                    (char == ">" and (peek_char0 == "=" or peek_char0 == ">"))
+                    or (char == "<" and (peek_char0 == "=" or peek_char0 == "<"))
+                    or (char == "/" and peek_char0 == "/")
+                    or (char == "*" and peek_char0 == "*")
+                ):
+                    token += self.eat_char()
+                elif peek_char0 and (
+                    (char == "-" and peek_char0 == ">")
+                    or (char == "+" and peek_char0 == "=")
+                    or (char == "-" and peek_char0 == "=")
+                    or (char == "*" and peek_char0 == "=")
+                    or (char == "/" and peek_char0 == "=")
+                    or (char == "%" and peek_char0 == "=")
+                    or (char == "&" and peek_char0 == "=")
+                    or (char == "|" and peek_char0 == "=")
+                    or (char == "^" and peek_char0 == "=")
+                ):
+                    token += self.eat_char()
+                    token_kind = TokenKind.DELIMITER
+
+                tokens.append(Token(token, token_kind, *self.get_line_info()))
+
+            elif Valid.is_single_char_delimiter(char):
+                """
+                ========= DELIMITER | OPERATOR =========
+                """
+                token = char
+                token_kind = TokenKind.DELIMITER
+                peek_char = self.peek_char()
+
+                if char == "=" and peek_char == "=":
+                    token += self.eat_char()
+                    token_kind = TokenKind.OPERATOR
+                elif char == "@" and peek_char == "=":
+                    token += self.eat_char()
+
+                tokens.append(Token(token, token_kind, *self.get_line_info()))
+
+            elif Valid.is_identifier_start(char):
                 """
                 ========= IDENTIFIER | OPERATOR | BYTE STRING | IMAGINARY | PREFIXED STRING =========
 
-                TODO: Valids.is_identifier_start must check for ASCII first
+                TODO: Valid.is_identifier_start must check for ASCII first
                 """
                 line_info = self.get_line_info()
                 line_info_before_identifier_lexing = (line_info[0], line_info[1] - 1)
@@ -411,7 +485,7 @@ class Lexer:
                     prev_codepoint = ord(prev_char) if prev_char else -1
                     token_kind = TokenKind.IDENTIFIER
 
-                    while next_char and Valids.is_identifier_continuation(next_char):
+                    while next_char and Valid.is_identifier_continuation(next_char):
                         token += self.eat_char()
 
                         # Peek at the next character in code.
@@ -422,8 +496,8 @@ class Lexer:
                     # insert a `*` operator between the operands.
                     if (
                         prev_char
-                        and not Valids.is_space(prev_char)
-                        and (Valids.is_hex_digit(prev_codepoint) or prev_char == ")")
+                        and not Valid.is_space(prev_char)
+                        and (Valid.is_hex_digit(prev_codepoint) or prev_char == ")")
                     ):
                         kind, prev_token = tokens[-1].kind, tokens[-1].data
 
@@ -599,7 +673,7 @@ class Lexer:
             char = self.peek_char(2)
             codepoint = ord(char) if char else -1
 
-            if not char or not Valids.is_dec_digit(codepoint):
+            if not char or not Valid.is_dec_digit(codepoint):
                 raise LexerError(
                     "Unexpected character in floating point literal",
                     *self.get_line_info(),
@@ -607,7 +681,7 @@ class Lexer:
 
             token += self.eat_char()  # Consume + | -
 
-        token += self.lex_digit_part(Valids.is_dec_digit, "floating point")
+        token += self.lex_digit_part(Valid.is_dec_digit, "floating point")
 
         return token
 
@@ -622,8 +696,8 @@ class Lexer:
         codepoint = ord(char) if char else -1
 
         # Check for digit part after dot
-        if Valids.is_dec_digit(codepoint):
-            token += self.lex_digit_part(Valids.is_dec_digit, "floating point")
+        if Valid.is_dec_digit(codepoint):
+            token += self.lex_digit_part(Valid.is_dec_digit, "floating point")
         else:
             token += "0"
 
@@ -634,7 +708,7 @@ class Lexer:
         codepoint = ord(peek_sign_or_digit) if peek_sign_or_digit else -1
 
         if peek_e == "e" and (
-            Valids.is_dec_digit(codepoint)
+            Valid.is_dec_digit(codepoint)
             or peek_sign_or_digit == "+"
             or peek_sign_or_digit == "-"
         ):

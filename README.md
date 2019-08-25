@@ -11,6 +11,8 @@
 ## Introduction
 Viper is a restricted subset of Python 3.x (with extra features) amenable to static analysis. The repository both defines the spec of the language and contains a canonical implementation of the compiler, which compiles a legal Viper code to WebAssembly.
 
+**Viper does not maintain semantic compatibility with Python**. Several dynamic elements known of Python are not available in Viper. For example, Viper doesn't have runtime module modification.
+
 There are other similarly oriented projects, but they are all objectively different from Viper.
 
 MicroPython is a well-optimized Python interpreter (with some JIT support) while Nuitka compiles Python to C. These two projects still allow dynamic aspects of Python, which means their performances may suffer from dynamically-written code.
@@ -33,9 +35,6 @@ RPython is quite similar to this project, but the developers have [made it clear
     ```sh
     pipenv run pytest
     ```
-
-## Non-goals
-Semantic compatibility with CPython isn't a goal. For example, Viper represents `int`s as 64-bit integers.
 
 
 ## Proposed CLI
