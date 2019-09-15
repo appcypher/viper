@@ -1,16 +1,55 @@
-""" Contains Viper's lexer implementation """
+"""
+An implementation of Viper's tokenizer
+
+NOTE: May turn lex function into a generator in the future to support generating tokens on demand.
+    Certain lexer errors may be caused by invalid syntax, but the lexer error shows first because
+    it comes before the parser.
+
+    1. https://medium.com/@gvanrossum_83706/building-a-peg-parser-d4869b5958fb#2a80
+"""
 
 from enum import Enum
 from .valid import Valid
 
 
 class Indentation:
-    """ Contains a lexer's indentation information """
+    """
+    This class holds top-level indentation information as well as indentation information of code in
+    brackets
+    """
 
-    def __init__(self):
-        self.indent_count = 0
-        self.is_space = True
-        self.indent_factor = 4
+    def __init__(self, open_bracket=None, start_indentation_count=0):
+        self.open_bracket = open_bracket
+        self.close_bracket = (
+            ")"
+            if open_bracket == "("
+            else (
+                "]" if open_bracket == "[" else ("}" if open_bracket == "{" else None)
+            )
+        )
+        self.indentation_count = start_indentation_count
+        self.block = None
+
+    def __repr__(self):
+        return (
+            f'Indentation(open_bracket="{self.open_bracket}", close_bracket="{self.close_bracket}"'
+            f", indentation_count={self.indentation_count}, block={self.block})"
+        )
+
+
+class Block:
+    """
+    This represents a block of code introduced by a colon and an indent within brackets.
+    A block can be the body content of a lambda or a match expression.
+    """
+
+    def __init__(self, start_indentation_count):
+        self.start_indentation_count = start_indentation_count
+
+    def __repr__(self):
+        return (
+            f'Block(start_indentation_count={self.start_indentation_count})'
+        )
 
 
 class Token:
@@ -58,13 +97,22 @@ class TokenKind(Enum):
     HEX_INTEGER = 13
     OPERATOR = 14
     DELIMITER = 15
+    KEYWORD = 16
+
+
+class IndentSpaceKind(Enum):
+    """ The kind of space of a code's indentation """
+
+    UNKNOWN = 0
+    SPACE = 1
+    TAB = 2
 
 
 class LexerError(Exception):
     """ Represents the error the lexer can raise """
 
     def __init__(self, message, row, column):
-        super().__init__(message)
+        super().__init__(f"(line: {row}, col: {column}) {message}")
         self.message = message  # Added because it is missing after super init
         self.row = row
         self.column = column
@@ -89,7 +137,10 @@ class Lexer:
         self.cursor = -1
         self.row = 0
         self.column = -1
-        self.indentation = Indentation()
+        self.indentations = [Indentation()]
+        self.indent_factor = -1
+        self.is_in_brackets = False
+        self.indent_space_type = IndentSpaceKind.UNKNOWN
 
     def vomit_char(self):
         """
@@ -119,6 +170,7 @@ class Lexer:
                     self.cursor += 1
                 self.column = -1
                 self.row += 1
+
             elif char == "\n":
                 self.column = -1
                 self.row += 1
@@ -187,11 +239,139 @@ class Lexer:
             # We check each character in the code and categorize it
             if char == "\r" or char == "\n":
                 """
-                ========= NEWLINE =========
+                ========= NEWLINE | INDENT | DEDENT =========
 
-                NOTE: \r\n is handled by eat_char method.
+                NOTE: '\r\n' is handled by eat_char method.
                 """
-                tokens.append(Token("", TokenKind.NEWLINE, *self.get_line_info()))
+
+                # Checking for indentation.
+                space_count = 0
+                has_mixed_space_types = False
+                prev_space = ''
+
+                # Consume all spaces.
+                while Valid.is_horizontal_space(self.peek_char()):
+                    cur_space = self.eat_char()
+
+                    # Checking if different space types were mixed.
+                    if space_count > 0 and (prev_space != cur_space):
+                        has_mixed_space_types = True
+
+                    prev_space = cur_space
+                    space_count += 1
+
+                peek_char = self.peek_char()
+
+                # If not followed by another newline, then it is a valid indentation.
+                if not (peek_char == "\r" or peek_char == "\n"):
+                    if has_mixed_space_types:
+                        raise LexerError(
+                            "Unexpected mix of different types of spaces in indentation",
+                            *self.get_line_info()
+                        )
+
+                    indent_space_type = self.indent_space_type
+
+                    if prev_space and (
+                        (indent_space_type == IndentSpaceKind.SPACE and prev_space != ' ') or
+                        (indent_space_type == IndentSpaceKind.TAB and prev_space != '\t')
+                    ):
+                        raise LexerError(
+                            "Unexpected mix of different types of spaces in indentation",
+                            *self.get_line_info()
+                        )
+
+                    indentation = self.indentations[-1]
+                    block = indentation.block
+
+                    # Skip indentations when inside brackets except for blocks.
+                    if indentation.block or not self.is_in_brackets:
+                        # Get difference in indentation.
+                        indent_diff = space_count - indentation.indentation_count
+
+                        if indent_diff > 0:  # If there is an indent.
+                            if self.indent_factor < 1:
+                                """ First indent in code """
+                                self.indent_factor = indent_diff
+                                self.indent_space_type = (
+                                    IndentSpaceKind.SPACE if prev_space == ' ' else
+                                    IndentSpaceKind.TAB
+                                )
+                            else:
+                                # Check if there is a consistent single indent.
+                                if indent_diff != self.indent_factor:
+                                    raise LexerError(
+                                        f"Expected an indent of {self.indent_factor} spaces",
+                                        *self.get_line_info()
+                                    )
+
+                            tokens.append(Token('', TokenKind.INDENT, *self.get_line_info()))
+
+                        elif indent_diff < 0:  # If there is an dedent.
+                            positive_indent_diff = abs(indent_diff)
+
+                            # If we are in a block, check if we have reached the end of block
+                            if block and space_count <= indentation.block.start_indentation_count:
+                                positive_indent_diff = abs(
+                                    indentation.indentation_count
+                                    - indentation.block.start_indentation_count
+                                )
+                                indentation.block = None
+                            else:
+                                # Ensure dedent is a multiple of the indent_factor.
+                                if positive_indent_diff % self.indent_factor:
+                                    raise LexerError(
+                                        "Unexpected number of spaces in dedent",
+                                        *self.get_line_info()
+                                    )
+
+                            for i in range(positive_indent_diff // self.indent_factor):
+                                tokens.append(Token('', TokenKind.DEDENT, *self.get_line_info()))
+
+                        else:  # Samedent
+                            tokens.append(Token("", TokenKind.NEWLINE, *self.get_line_info()))
+
+                    # Update indentation count.
+                    self.indentations[-1].indentation_count = space_count
+
+                else:  # Not indentation
+                    # Skip indenntations and newlines when inside brackets.
+                    if not self.is_in_brackets:
+                        tokens.append(Token("", TokenKind.NEWLINE, *self.get_line_info()))
+
+            elif char == "#":
+                """
+                ========= COMMENT =========
+                """
+                # Skip comments
+                char = self.peek_char()
+
+                while char and not (char == "\r" or char == "\n"):
+                    self.eat_char()
+                    char = self.peek_char()
+
+            elif Valid.is_horizontal_space(char):
+                """
+                Ignore spaces that aren't at the start of the line.
+                """
+                while Valid.is_horizontal_space(self.peek_char()):
+                    self.eat_char()
+
+            elif char == "\\":
+                """
+                ========= EXPLICIT LINE JOIN  =========
+                """
+                char = self.peek_char()
+
+                # If next character is not a newline, not a valid line continuation
+                if not (char == "\r" or char == "\n"):
+                    raise LexerError(
+                        f"Unexpected character after line continuation character: {repr(char)}",
+                        *self.get_line_info(),
+                    )
+
+                # Consume newline
+                self.eat_char()
 
             elif char == "'":
                 """
@@ -321,8 +501,7 @@ class Lexer:
 
                 TODO: Validate representable integer and float
                 """
-                token = self.lex_digit_part(Valid.is_dec_digit)
-                token = char + (token if token else "")
+                token = char + self.lex_digit_part(Valid.is_dec_digit, raise_if_empty=False)
                 token_kind = TokenKind.DEC_INTEGER
 
                 # Check for potential floating point value
@@ -356,6 +535,7 @@ class Lexer:
                     token_kind = TokenKind.DEC_FLOAT
 
                 tokens.append(Token(token, token_kind, *self.get_line_info()))
+
             elif char == "!":
                 """
                 ========= OPERATOR =========
@@ -419,11 +599,66 @@ class Lexer:
 
             elif Valid.is_single_char_delimiter(char):
                 """
-                ========= DELIMITER | OPERATOR =========
+                ========= DELIMITER | OPERATOR | INDENTATION =========
                 """
                 token = char
                 token_kind = TokenKind.DELIMITER
                 peek_char = self.peek_char()
+                nested_indentation_num = len(self.indentations)
+                indentation = self.indentations[-1]
+
+                # Check if there is an open bracket.
+                if char == "(" or char == "[" or char == "{":
+                    self.indentations.append(
+                        Indentation(
+                            open_bracket=char,
+                            start_indentation_count=indentation.indentation_count
+                        )
+                    )
+
+                    self.is_in_brackets = True
+
+                # Check if there is an close bracket.
+                if char == indentation.close_bracket:
+                    if nested_indentation_num == 2:
+                        self.is_in_brackets = False
+
+                    if nested_indentation_num > 1:
+                        # If we are in a block and block hasn't been dedented
+                        if indentation.block and (
+                            indentation.indentation_count
+                            > indentation.block.start_indentation_count
+                        ):
+                            positive_indent_diff = abs(
+                                indentation.indentation_count
+                                - indentation.block.start_indentation_count
+                            )
+
+                            for i in range(positive_indent_diff // self.indent_factor):
+                                tokens.append(Token('', TokenKind.DEDENT, *self.get_line_info()))
+
+                        self.indentations.pop()
+
+                # Detecting a top-level block in brackets
+                if self.is_in_brackets and not indentation.block and char == ':':
+                    offset = 0
+                    is_block = False
+
+                    # Skip all spaces until we find a newline
+                    while True:
+                        offset += 1
+                        peek_char = self.peek_char(offset)
+
+                        if Valid.is_horizontal_space(peek_char):
+                            continue
+                        elif peek_char == '\n' or peek_char == '\r':
+                            is_block = True
+                            break
+                        else:
+                            break
+
+                    if is_block:
+                        indentation.block = Block(indentation.indentation_count)
 
                 if char == "=" and peek_char == "=":
                     token += self.eat_char()
@@ -435,7 +670,8 @@ class Lexer:
 
             elif Valid.is_identifier_start(char):
                 """
-                ========= IDENTIFIER | OPERATOR | BYTE STRING | IMAGINARY | PREFIXED STRING =========
+                ========= IDENTIFIER | OPERATOR | BYTE STRING | IMAGINARY =========
+                ========= PREFIXED STRING | INDENTATION | KEYWORD =========
 
                 TODO: Valid.is_identifier_start must check for ASCII first
                 """
@@ -483,13 +719,17 @@ class Lexer:
                     next_char = self.peek_char()
                     prev_char = self.peek_char(-1)
                     prev_codepoint = ord(prev_char) if prev_char else -1
-                    token_kind = TokenKind.IDENTIFIER
-
                     while next_char and Valid.is_identifier_continuation(next_char):
                         token += self.eat_char()
 
                         # Peek at the next character in code.
                         next_char = self.peek_char()
+
+                    token_kind = (
+                        TokenKind.KEYWORD
+                        if Valid.is_keyword(token)
+                        else TokenKind.IDENTIFIER
+                    )
 
                     # OPERATOR
                     # If this is a coefficient expression like 2_000fahr or (0b100)num,
@@ -542,6 +782,12 @@ class Lexer:
 
             # Consume the next character in code.
             char = self.eat_char()
+
+        # Checking possible dedents at the end of code
+        prev_indent = self.indentations[-1].indentation_count
+        if prev_indent > 0:
+            for i in range(prev_indent // self.indent_factor):
+                tokens.append(Token('', TokenKind.DEDENT, *self.get_line_info()))
 
         return tokens
 
@@ -629,13 +875,7 @@ class Lexer:
         prev_char = ""
         token = ""
 
-        # Checking if we have a valid digit for a start
-        if not char or char != "_" and not digit_check(codepoint):
-            raise LexerError(
-                f"Unexpected end of {number_type} literal", *self.get_line_info()
-            )
-
-        # Iterate over remaining digits
+        # Iterate over remaining digits.
         while char == "_" or (codepoint and digit_check(codepoint)):
             self.eat_char()
             if prev_char == "_" and char == "_":

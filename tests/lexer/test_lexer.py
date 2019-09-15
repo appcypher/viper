@@ -1,4 +1,9 @@
-from compiler.lexer import Lexer, Token, TokenKind, LexerError
+"""
+TODO: Add more tests of code with multiple tokens
+"""
+
+
+from compiler.lexer.lexer import Lexer, Token, TokenKind, LexerError, IndentSpaceKind
 from pytest import raises
 
 
@@ -245,10 +250,14 @@ def test_lexer_tokenizes_valid_dec_integer_successfully():
     result1 = Lexer("123456789").lex()
     result2 = Lexer("01_33456_789").lex()
     result3 = Lexer("5_37450_99").lex()
+    result4 = Lexer("1").lex()
+    result5 = Lexer("0").lex()
     assert result0 == [Token("0123456789", TokenKind.DEC_INTEGER, 0, 9)]
     assert result1 == [Token("123456789", TokenKind.DEC_INTEGER, 0, 8)]
     assert result2 == [Token("0133456789", TokenKind.DEC_INTEGER, 0, 11)]
     assert result3 == [Token("53745099", TokenKind.DEC_INTEGER, 0, 9)]
+    assert result4 == [Token("1", TokenKind.DEC_INTEGER, 0, 0)]
+    assert result5 == [Token("0", TokenKind.DEC_INTEGER, 0, 0)]
 
 
 def test_lexer_tokenizes_valid_hex_integer_successfully():
@@ -610,7 +619,365 @@ def test_lexer_fails_with_single_exclamation_mark():
         0,
     )
 
-def test_lexer_tokenizes_():
-    result0 = Lexer("(").lex()
 
-    assert result0 == [Token("(", TokenKind.DELIMITER, 0, 0)]
+def test_lexer_skips_comment():
+    result0 = Lexer("# hello world!\n").lex()
+    result1 = Lexer("# dhdgsdgjf,adtw%$#@5C%^@VY2;P'K9(").lex()
+    result2 = Lexer("#").lex()
+
+    assert result0 == [Token("", TokenKind.NEWLINE, 1, -1)]
+    assert result1 == []
+    assert result2 == []
+
+
+def test_lexer_continues_on_valid_line_continuation():
+    result = Lexer(r"""\
+    """).lex()
+    assert result == []
+
+
+def test_lexer_fails_on_invalid_line_continuation():
+    lexer0 = Lexer(r"\    \n")
+    lexer1 = Lexer(r"\x")
+
+    with raises(LexerError) as exc_info0:
+        lexer0.lex()
+
+    with raises(LexerError) as exc_info1:
+        lexer1.lex()
+
+    assert (exc_info0.value.message, exc_info0.value.row, exc_info0.value.column) == (
+        "Unexpected character after line continuation character: ' '",
+        0,
+        0,
+    )
+
+    assert (exc_info1.value.message, exc_info1.value.row, exc_info1.value.column) == (
+        "Unexpected character after line continuation character: 'x'",
+        0,
+        0,
+    )
+
+
+def test_lexer_tokenizes_keywords_successfully():
+    result = Lexer(
+        "False None True and as assert async await break class continue def del elif else except "
+        "finally for from global if import in is lambda nonlocal not or pass raise return try "
+        "while with yield const ref ptr val match let var enum true false interface where macro "
+        "typealias"
+    ).lex()
+
+    assert result == [
+        Token("False", TokenKind.KEYWORD, 0, 4),
+        Token("None", TokenKind.KEYWORD, 0, 9),
+        Token("True", TokenKind.KEYWORD, 0, 14),
+        Token("and", TokenKind.KEYWORD, 0, 18),
+        Token("as", TokenKind.KEYWORD, 0, 21),
+        Token("assert", TokenKind.KEYWORD, 0, 28),
+        Token("async", TokenKind.KEYWORD, 0, 34),
+        Token("await", TokenKind.KEYWORD, 0, 40),
+        Token("break", TokenKind.KEYWORD, 0, 46),
+        Token("class", TokenKind.KEYWORD, 0, 52),
+        Token("continue", TokenKind.KEYWORD, 0, 61),
+        Token("def", TokenKind.KEYWORD, 0, 65),
+        Token("del", TokenKind.KEYWORD, 0, 69),
+        Token("elif", TokenKind.KEYWORD, 0, 74),
+        Token("else", TokenKind.KEYWORD, 0, 79),
+        Token("except", TokenKind.KEYWORD, 0, 86),
+        Token("finally", TokenKind.KEYWORD, 0, 94),
+        Token("for", TokenKind.KEYWORD, 0, 98),
+        Token("from", TokenKind.KEYWORD, 0, 103),
+        Token("global", TokenKind.KEYWORD, 0, 110),
+        Token("if", TokenKind.KEYWORD, 0, 113),
+        Token("import", TokenKind.KEYWORD, 0, 120),
+        Token("in", TokenKind.KEYWORD, 0, 123),
+        Token("is", TokenKind.KEYWORD, 0, 126),
+        Token("lambda", TokenKind.KEYWORD, 0, 133),
+        Token("nonlocal", TokenKind.KEYWORD, 0, 142),
+        Token("not", TokenKind.KEYWORD, 0, 146),
+        Token("or", TokenKind.KEYWORD, 0, 149),
+        Token("pass", TokenKind.KEYWORD, 0, 154),
+        Token("raise", TokenKind.KEYWORD, 0, 160),
+        Token("return", TokenKind.KEYWORD, 0, 167),
+        Token("try", TokenKind.KEYWORD, 0, 171),
+        Token("while", TokenKind.KEYWORD, 0, 177),
+        Token("with", TokenKind.KEYWORD, 0, 182),
+        Token("yield", TokenKind.KEYWORD, 0, 188),
+        Token("const", TokenKind.KEYWORD, 0, 194),
+        Token("ref", TokenKind.KEYWORD, 0, 198),
+        Token("ptr", TokenKind.KEYWORD, 0, 202),
+        Token("val", TokenKind.KEYWORD, 0, 206),
+        Token("match", TokenKind.KEYWORD, 0, 212),
+        Token("let", TokenKind.KEYWORD, 0, 216),
+        Token("var", TokenKind.KEYWORD, 0, 220),
+        Token("enum", TokenKind.KEYWORD, 0, 225),
+        Token("true", TokenKind.KEYWORD, 0, 230),
+        Token("false", TokenKind.KEYWORD, 0, 236),
+        Token("interface", TokenKind.KEYWORD, 0, 246),
+        Token("where", TokenKind.KEYWORD, 0, 252),
+        Token("macro", TokenKind.KEYWORD, 0, 258),
+        Token("typealias", TokenKind.KEYWORD, 0, 268),
+    ]
+
+
+def test_lexer_tokenizes_valid_indentations_successfully():
+    # Indentation with spaces
+    lexer0 = Lexer("name \n    age \n        gender")
+    result0 = lexer0.lex()
+
+    # Indentation with tabs
+    lexer1 = Lexer("name \n\t\tage \n\t\t\t\tgender\nhello")
+    result1 = lexer1.lex()
+
+    # Indentation in nested brackets
+    lexer2 = Lexer("name \n\t(age \n{\n\t\n\t\tgender\n} try)\n\thello")
+    result2 = lexer2.lex()
+
+    # Unmatched indentation for parentheses with block inside
+    lexer3 = Lexer(
+        "name (\r\n"
+        "\t\tlambda:\n"
+        "\t\t\t\tname, match (x, y): \t\n"
+        "\t\t\t\t\t\tage)"
+    )
+    result3 = lexer3.lex()
+
+    # Matched indentation for parentheses with block inside
+    lexer4 = Lexer(
+        "name (\n"
+        " 1_000_234, lambda:\n"
+        "   name, match (x, y): \t\r\n"
+        "     age   \n"
+        ")"
+    )
+    result4 = lexer4.lex()
+
+    # Matched indentation for parentheses with block inside
+    lexer5 = Lexer(
+        "name (\n"
+        "  1_000_234\n"
+        "    lambda:\n"
+        "          \n"
+        "        ( name, lambda: \t\n"
+        "            age\r\n"
+        "            hello)\n"
+        "        gem)"
+    )
+    result5 = lexer5.lex()
+
+    # Unmatched indentation for parentheses with block inside, but not currently in block
+    lexer6 = Lexer(
+        "name (\n"
+        "  lambda:\n"
+        "    name, match (x, y): \n"
+        "      age\n"
+        "      \r\n"
+        "  { lambda: x})"
+    )
+    result6 = lexer6.lex()
+
+    assert result0 == [
+        Token("name", TokenKind.IDENTIFIER, 0, 3),
+        Token("", TokenKind.INDENT, 1, 3),
+        Token("age", TokenKind.IDENTIFIER, 1, 6),
+        Token("", TokenKind.INDENT, 2, 7),
+        Token("gender", TokenKind.IDENTIFIER, 2, 13),
+        Token("", TokenKind.DEDENT, 2, 13),
+        Token("", TokenKind.DEDENT, 2, 13),
+    ]
+    assert (lexer0.indent_factor, lexer0.indent_space_type) == (4, IndentSpaceKind.SPACE)
+
+    assert result1 == [
+        Token("name", TokenKind.IDENTIFIER, 0, 3),
+        Token("", TokenKind.INDENT, 1, 1),
+        Token("age", TokenKind.IDENTIFIER, 1, 4),
+        Token("", TokenKind.INDENT, 2, 3),
+        Token("gender", TokenKind.IDENTIFIER, 2, 9),
+        Token("", TokenKind.DEDENT, 3, -1),
+        Token("", TokenKind.DEDENT, 3, -1),
+        Token("hello", TokenKind.IDENTIFIER, 3, 4),
+    ]
+    assert (lexer1.indent_factor, lexer1.indent_space_type) == (2, IndentSpaceKind.TAB)
+
+    assert result2 == [
+        Token("name", TokenKind.IDENTIFIER, 0, 3),
+        Token("", TokenKind.INDENT, 1, 0),
+        Token("(", TokenKind.DELIMITER, 1, 1),
+        Token("age", TokenKind.IDENTIFIER, 1, 4),
+        Token("{", TokenKind.DELIMITER, 2, 0),
+        Token("gender", TokenKind.IDENTIFIER, 4, 7),
+        Token("}", TokenKind.DELIMITER, 5, 0),
+        Token("try", TokenKind.KEYWORD, 5, 4),
+        Token(")", TokenKind.DELIMITER, 5, 5),
+        Token("", TokenKind.NEWLINE, 6, 0),
+        Token("hello", TokenKind.IDENTIFIER, 6, 5),
+        Token("", TokenKind.DEDENT, 6, 5),
+    ]
+    assert (lexer2.indent_factor, lexer2.indent_space_type) == (1, IndentSpaceKind.TAB)
+
+    assert result3 == [
+        Token("name", TokenKind.IDENTIFIER, 0, 3),
+        Token("(", TokenKind.DELIMITER, 0, 5),
+        Token("lambda", TokenKind.KEYWORD, 1, 7),
+        Token(":", TokenKind.DELIMITER, 1, 8),
+        Token("", TokenKind.INDENT, 2, 3),
+        Token("name", TokenKind.IDENTIFIER, 2, 7),
+        Token(",", TokenKind.DELIMITER, 2, 8),
+        Token("match", TokenKind.KEYWORD, 2, 14),
+        Token("(", TokenKind.DELIMITER, 2, 16),
+        Token("x", TokenKind.IDENTIFIER, 2, 17),
+        Token(",", TokenKind.DELIMITER, 2, 18),
+        Token("y", TokenKind.IDENTIFIER, 2, 20),
+        Token(")", TokenKind.DELIMITER, 2, 21),
+        Token(":", TokenKind.DELIMITER, 2, 22),
+        Token("", TokenKind.INDENT, 3, 5),
+        Token("age", TokenKind.IDENTIFIER, 3, 8),
+        Token("", TokenKind.DEDENT, 3, 9),
+        Token("", TokenKind.DEDENT, 3, 9),
+        Token(")", TokenKind.DELIMITER, 3, 9)
+    ]
+    assert (lexer3.indent_factor, lexer3.indent_space_type) == (2, IndentSpaceKind.TAB)
+
+    assert result4 == [
+        Token("name", TokenKind.IDENTIFIER, 0, 3),
+        Token("(", TokenKind.DELIMITER, 0, 5),
+        Token("1000234", TokenKind.DEC_INTEGER, 1, 9),
+        Token(",", TokenKind.DELIMITER, 1, 10),
+        Token("lambda", TokenKind.KEYWORD, 1, 17),
+        Token(":", TokenKind.DELIMITER, 1, 18),
+        Token("", TokenKind.INDENT, 2, 2),
+        Token("name", TokenKind.IDENTIFIER, 2, 6),
+        Token(",", TokenKind.DELIMITER, 2, 7),
+        Token("match", TokenKind.KEYWORD, 2, 13),
+        Token("(", TokenKind.DELIMITER, 2, 15),
+        Token("x", TokenKind.IDENTIFIER, 2, 16),
+        Token(",", TokenKind.DELIMITER, 2, 17),
+        Token("y", TokenKind.IDENTIFIER, 2, 19),
+        Token(")", TokenKind.DELIMITER, 2, 20),
+        Token(":", TokenKind.DELIMITER, 2, 21),
+        Token("", TokenKind.INDENT, 3, 4),
+        Token("age", TokenKind.IDENTIFIER, 3, 7),
+        Token("", TokenKind.DEDENT, 4, -1),
+        Token("", TokenKind.DEDENT, 4, -1),
+        Token(")", TokenKind.DELIMITER, 4, 0)
+    ]
+    assert (lexer4.indent_factor, lexer4.indent_space_type) == (2, IndentSpaceKind.SPACE)
+
+    assert result5 == [
+        Token("name", TokenKind.IDENTIFIER, 0, 3),
+        Token("(", TokenKind.DELIMITER, 0, 5),
+        Token("1000234", TokenKind.DEC_INTEGER, 1, 10),
+        Token("lambda", TokenKind.KEYWORD, 2, 9),
+        Token(":", TokenKind.DELIMITER, 2, 10),
+        Token("", TokenKind.INDENT, 4, 7),
+        Token("(", TokenKind.DELIMITER, 4, 8),
+        Token("name", TokenKind.IDENTIFIER, 4, 13),
+        Token(",", TokenKind.DELIMITER, 4, 14),
+        Token("lambda", TokenKind.KEYWORD, 4, 21),
+        Token(":", TokenKind.DELIMITER, 4, 22),
+        Token("", TokenKind.INDENT, 5, 11),
+        Token("age", TokenKind.IDENTIFIER, 5, 14),
+        Token("", TokenKind.NEWLINE, 6, 11),
+        Token("hello", TokenKind.IDENTIFIER, 6, 16),
+        Token("", TokenKind.DEDENT, 6, 17),
+        Token(")", TokenKind.DELIMITER, 6, 17),
+        Token("", TokenKind.NEWLINE, 7, 7),
+        Token("gem", TokenKind.IDENTIFIER, 7, 10),
+        Token("", TokenKind.DEDENT, 7, 11),
+        Token(")", TokenKind.DELIMITER, 7, 11)
+    ]
+    assert (lexer5.indent_factor, lexer5.indent_space_type) == (4, IndentSpaceKind.SPACE)
+
+    assert result6 == [
+        Token("name", TokenKind.IDENTIFIER, 0, 3),
+        Token("(", TokenKind.DELIMITER, 0, 5),
+        Token("lambda", TokenKind.KEYWORD, 1, 7),
+        Token(":", TokenKind.DELIMITER, 1, 8),
+        Token("", TokenKind.INDENT, 2, 3),
+        Token("name", TokenKind.IDENTIFIER, 2, 7),
+        Token(",", TokenKind.DELIMITER, 2, 8),
+        Token("match", TokenKind.KEYWORD, 2, 14),
+        Token("(", TokenKind.DELIMITER, 2, 16),
+        Token("x", TokenKind.IDENTIFIER, 2, 17),
+        Token(",", TokenKind.DELIMITER, 2, 18),
+        Token("y", TokenKind.IDENTIFIER, 2, 20),
+        Token(")", TokenKind.DELIMITER, 2, 21),
+        Token(":", TokenKind.DELIMITER, 2, 22),
+        Token("", TokenKind.INDENT, 3, 5),
+        Token("age", TokenKind.IDENTIFIER, 3, 8),
+        Token("", TokenKind.DEDENT, 5, 1),
+        Token("", TokenKind.DEDENT, 5, 1),
+        Token("{", TokenKind.DELIMITER, 5, 2),
+        Token("lambda", TokenKind.KEYWORD, 5, 9),
+        Token(":", TokenKind.DELIMITER, 5, 10),
+        Token("x", TokenKind.IDENTIFIER, 5, 12),
+        Token("}", TokenKind.DELIMITER, 5, 13),
+        Token(")", TokenKind.DELIMITER, 5, 14)
+    ]
+    assert (lexer6.indent_factor, lexer6.indent_space_type) == (2, IndentSpaceKind.SPACE)
+
+
+def test_lexer_fails_on_invalid_indentation():
+    # Mixed space types in indentation
+    lexer0 = Lexer(
+        "lambda *args:\n"
+        "\t\t[1, 2, 3]\r\n"
+        "\t\t  0x110"
+    )
+
+    # Wrong number of spaces in indent
+    lexer1 = Lexer(
+        "lambda *args:\n"
+        "\t\t[1, 2, 3]\r\n"
+        "\t\t\t0x110"
+    )
+
+    # Wrong number of spaces in dedent
+    lexer2 = Lexer(
+        "lambda *args:\n"
+        "\t\t[1, 2, 3]\r\n"
+        "\t0x110"
+    )
+
+    # Mixed space types in separate indentation
+    lexer3 = Lexer(
+        "lambda *args:\n"
+        "\t\t[1, 2, 3]\r\n"
+        "    0x110"
+    )
+
+    with raises(LexerError) as exc_info0:
+        lexer0.lex()
+
+    with raises(LexerError) as exc_info1:
+        lexer1.lex()
+
+    with raises(LexerError) as exc_info2:
+        lexer2.lex()
+
+    with raises(LexerError) as exc_info3:
+        lexer3.lex()
+
+    assert (exc_info0.value.message, exc_info0.value.row, exc_info0.value.column) == (
+        "Unexpected mix of different types of spaces in indentation",
+        2,
+        3,
+    )
+
+    assert (exc_info1.value.message, exc_info1.value.row, exc_info1.value.column) == (
+        "Expected an indent of 2 spaces",
+        2,
+        2,
+    )
+
+    assert (exc_info2.value.message, exc_info2.value.row, exc_info2.value.column) == (
+        "Unexpected number of spaces in dedent",
+        2,
+        0,
+    )
+
+    assert (exc_info3.value.message, exc_info3.value.row, exc_info3.value.column) == (
+        "Unexpected mix of different types of spaces in indentation",
+        2,
+        3,
+    )
