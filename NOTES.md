@@ -194,8 +194,8 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
         INSTANTIATIONS
 
         foo: (Object [ str ])
-        foo: (Object [ .., str ])
-        foo: (Object [ int, .. ])
+        foo: (Object [ *, str ])
+        foo: (Object [ int, * ])
         """
         ```
 
@@ -240,7 +240,7 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
                 get_name(cat)
 
                 """
-                get_name: (Object [ str, .. ])
+                get_name: (Object [ str, * ])
                 """
                 ```
 
@@ -362,10 +362,19 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
 
     Viper is all about structural typing. It sees type unsafety and covariance as union types and inheritance as intersection types.
 
+- Introspection
+
+    #### IMPLEMENTATION
+
+    Viper supports some level of introspection. The type of an object can be introspected for example. Since types of variables are known at compile time, specialized functions are generated for introspect-like behavior.
 
 
+    ```py
+    def __type__(obj: int):
+        return int
+    ```
 
-#### FEATURES IN PYTHON THAT BREAK STATIC GUARANTEES OR PREVENT STATIC OPTIMIZATIONS
+#### SEMANTIC DIVERGENCE FROM PYTHON
 
 - Eval / exec
     - Use of eval / exec
@@ -474,7 +483,7 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
 
 - Functions
 
-    - Vipers doesn't support spreading any iterable except tuples and named tupeles as arguments to a function
+    - Vipers doesn't support spreading any iterable except tuples and named tuples as arguments to a function
         ```py
         dc = { 'name': 'John', 'age': 45 }
         ls = [1, 2, 3]
@@ -489,6 +498,18 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
 
         some_func(**dc)
         some_func(*ls)
+        """
+        ```
+
+    - Functions that return nothing, don't return None implicitly
+        ```py
+        def foo():
+            2 + 3
+
+        """
+        ERROR
+
+        print(foo()) # foo returns nothing
         """
         ```
 
@@ -545,15 +566,54 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
         print(num) # -4_611_686_018_427_387_903
         ```
 
-- StopIteration and KeyError
+- StopIteration
 
     - Exception handling as a means of control flow is expensive.
         ```py
         for i in range(10):
             print(25)
+
+        d = { 'name': 'John', 'age': 56 }
+        """
+        ERROR
+
+        gender = d['gender']
+        """
         ```
 
-        Viper optimizes StopIteration and KeyError exception handlers where possible.
+        StopIteration is expected to be returned rather than raised.
+        In the case of generators, returning nothing marks the end of an iteration.
+
+        - Iterables
+            ```py
+            class list:
+                def __iter__(self)
+                    return list_iterator(self)
+
+            class list_iterator:
+                def __init__(self, list):
+                    self.list = list
+                    self.counter = 0
+
+                def __next__(self):
+                    if self.counter < len(list):
+                        result = list[self.counter]
+                        self.counter += 1
+                        return result
+                    else:
+                        return StopIteration
+            ```
+
+        - Generators
+            ```py
+            def range(x: int):
+                count = 0
+                while count < x:
+                    yield count
+                    count += 1
+                return
+            ```
+
 
 - Concurrency
 
@@ -657,6 +717,24 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
 
         - Instead of the 'j' suffix, Viper expects a 'im' suffix
 
+- Generators
+
+    - Generators are copyable and are passed by value
+
+    ```py
+    def get_nums():
+        for i in range(10):
+            yield i
+
+    x = get_nums()
+    y = x
+
+    list(x) # [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+    list(y) # [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+    ```
+
+
+
 ## CODE GENERATION
 
 - WebAssembly
@@ -711,20 +789,15 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
     Mammal > Person
     Person == Person
 
-    # Interface (In draft). Similar to Go2's contracts
-    where!(T > Mammal, U == Person)
-    interface Equal{T, U}(Eq):
-        def __eq__(T, U): pass
-
     # Generics
-    class Person{T, U: Equal}(A, B):
+    class Person{T, U}(A, B) where (T, < Person:
         def __init__(self, name: T):
             self.name = name
 
         def __eq__(self, name: T, other_name: U):
             return name == other_name
 
-    def get_person{T}(name: T):
+    def get_person{T}(name: T) where T < Person:
         return Person{T}(name)
 
     jane = get_person{str}('Jane Doe')
@@ -765,15 +838,11 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
     identity: Option{str} = Option.None
 
     match identity:
-        Option.Some(value) => value
-        Option.Err() => raise Error()
-        * => pass
+        Option.Some(value) : value
+        Option.Err() : raise Error()
+        _ : pass
 
     identity: int | str = 'XNY7V40'
-
-    match identity:
-        *: int => value
-        *: str => value
     ```
 
 - Additional reserved keywords
@@ -844,32 +913,10 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
     num3 = val num2
     ```
 
-- Symbols
-    ```julia
-    sym = $symbol
-    ```
-
 - New named_tuple syntax
     ```py
     named_tup = (name="James", age=10)
     named_tup.name
-    ```
-
-- Statement assignment
-    ```py
-    value = (
-        if name == 'Steve':
-            20
-        else:
-            30
-    )
-
-    return (
-        if name == 'Steve':
-            20
-        else:
-            30
-    )
     ```
 
 - Introducing more primitive types
@@ -882,20 +929,20 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
 - Pattern matching
     ```py
     match x:
-        Person(name, age) => 1
-        [x, y = 5, z] => y
-        (x, y = 5, 10, *z) => x
-        {x, y = 5, 10, *z} => x
-        { x: 'x', y: 'y',  **z} => x
-        10 or 11 and 12 => x
-        0:89 => 10
-        * => 11
+        Person(name, age) : 1
+        [x, y = 5, z] : y # List
+        (x, y = 5, 10, *z) : x # Tuple and NamedTuple
+        {x, y = 5, 10, *z} : x # Set
+        # { x: 'x', y: 'y',  **z} = x
+        10 or 11 and 12 : x
+        0 .. 89 : 10
+        _ : 11
     ```
 
 - Partial application
     ```py
-    add2 = add(2, ..)
-    add10 = add(.., 10)
+    add2 = add(2, _)
+    add10 = add(_, 10)
     ```
 
 
@@ -914,35 +961,44 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
 
 - Overloading functions and methods based on arity and types
     ```py
-    class Person:
-        def __init__(self, name):
-            self.name = name
+    @decorator
+    def debug(f: function):
+        def wrapper(*args):
+            if "debug" in @features():
+                f(*args)
 
-        def __init__(self, name, age):
-            self.name = name
-            self.age = age
+        return wrapper
 
-        def __init__(self, name, age: int):
-            self.name = name
-            self.age = age
+    @decorator
+    def do_twice(exp: binary_op):
+        return (
+            lambda x:
+                exp; exp
+        )()
+
+    @decorator
+    def classes(*tup: symbol):
+        new_classes = ()
+
+        @map(tup, replace=item, out=new_classes) # A special compiler decorator
+        class item:
+            def __init__(self, name):
+                self.name = name
+
+        return new_classes
     ```
 
-- Hygenic macros
+    Examples
     ```py
-    macro hello_macro($func: Identifier [ $(, $expr: Expression)* ] ):
-        print('|| HELLO MACRO ||')
-        $func( $( expr, )* )
+    @debug
+    def println(*args):
+        print(*args)
 
-    hello_macro!(foo, [1, 2, 3])
+    @do_twice(a += 5)
+
+    @classes(Person, Animal)
     ```
 
-    Syntax may clash with format specifiers !r, !s, !a.
-
-    ```py
-    f"He said his name is {name!r}."
-    ```
-
-    NOTE: Susceptible to change.
 
 - Coefficient expression [IN PROGRESS]
     ```py
@@ -972,6 +1028,62 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
     ```py
     2 ^ 5 == 25
     ```
+
+- Vectorization
+    ```py
+    apply.(array, double)
+    C = A .* B
+    ```
+
+- More operators
+    ```py
+    class Num:
+        # ...
+        def __plus__(self, other):
+            return Num(self.value + other.value)
+
+        def __sqrt__(self):
+            return Num(√(self.val))
+
+        def __square__(self):
+            return Num(self.val²)
+
+    a, b = Num(2), Num(3)
+
+    sum = a + b
+    rooted = √a
+    squared = a²
+    ```
+
+- Range syntax
+    ```py
+    range1 = (0:11) # Range object
+    range2 = (0:2:11) # Range object
+    arr1 = [0:10] # List object
+    arr2 = [0:2:10] # List object
+    ```
+
+
+- Where guard
+    ```py
+    for i in (1:20) where i % 2:
+        print(i)
+    ```
+
+- Underscore meaning discarded value or unprovided value
+    ```py
+    for _ in (1:11):
+        print("Hello")
+
+        """
+        ERROR
+
+        print(_)
+        """
+    f = add(2, _)
+    ```
+
+
 
 ## GARBAGE COLLECTION
 In Swift, variables are deallocated in their declaration stack frames or parents of that. Never a child frame of the declaration scope. Viper takes a similar approach.
@@ -1150,3 +1262,4 @@ In Swift, variables are deallocated in their declaration stack frames or parents
 
     some = scores[3:7]
     ```
+
