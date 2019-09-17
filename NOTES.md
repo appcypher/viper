@@ -980,7 +980,7 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
     def classes(*tup: symbol):
         new_classes = ()
 
-        @map(tup, replace=item, out=new_classes) # A special compiler decorator
+        @map(tup, item, out=new_classes) # A special compiler decorator
         class item:
             def __init__(self, name):
                 self.name = name
