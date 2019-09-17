@@ -7,8 +7,7 @@
 
 <h1 align="center">VIPER</h1>
 
-
-## Introduction
+### 👋 INTRODUCTION
 Viper is a restricted subset of Python 3.x (with extra features) amenable to static analysis. The repository both defines the spec of the language and contains a reference implementation of the compiler, which compiles a legal Viper code to WebAssembly.
 
 **Viper does not maintain semantic compatibility with Python**. Several dynamic elements known of Python are not available in Viper. For example, Viper doesn't have runtime module modification.
@@ -21,8 +20,21 @@ Also unlike Nim, Boo and Cobra, Viper tries to stick to Python syntax and semant
 
 RPython is quite similar to this project, but the developers have [made it clear](https://rpython.readthedocs.io/en/latest/faq.html#do-i-have-to-rewrite-my-programs-in-rpython) several times their goal is not to make RPython a standalone language.
 
-## Setting Up Development Environment
-- [Install pipenv](https://docs.pipenv.org/en/latest/install/#installing-pipenv)
+### ⚙️ SETTING UP THE PROJECT
+##### REQUIREMENTS
+- [Python 3.7+](https://www.python.org/downloads/) - Python interpreter
+- [Pipenv](https://docs.pipenv.org/en/latest/install/#installing-pipenv) - Python package manager
+
+##### STEPS
+- Clone project
+    ```sh
+    git clone https://www.github.com/appcypher/viper.git
+    ```
+
+- Move to project's directory
+    ```sh
+    cd viper
+    ```
 
 - Install dependencies
 
@@ -30,16 +42,40 @@ RPython is quite similar to this project, but the developers have [made it clear
     pipenv install
     ```
 
-- Run tests
-
+- Build the project [macOS and Linux]
     ```sh
+    sh build.sh setup
+    ```
+
+- Compile and run sample viper code [WIP]
+    ```sh
+    viper samples/class.vi
+    ```
+
+### ✅ TESTING
+##### REQUIREMENTS
+- Same as [setting up the project](#setting-up-the-project)
+
+##### STEPS
+- You can run all the tests in a single command.
+    ```bash
     pipenv run pytest
     ```
 
-
-## Proposed CLI
-- Run a viper source file
-
+### 🛠 USAGE
+- Show help info
     ```sh
-    viper sample.vi
+    viper --help
     ```
+
+- Compile and execute a Viper source file [WIP]
+    ```sh
+    viper samples/class.vi
+    ```
+
+### 🤝 LICENSE
+[Apache License 2.0](LICENSE)
+
+
+
+<sup><sup><sub><sub>[Viper](#README.md) is to [Python](https://github.com/python/cpython) what [Crystal](https://github.com/crystal-lang/crystal) is to [Ruby](https://github.com/ruby/ruby)<sub></sub></sup></sup>
