@@ -16,3 +16,15 @@ imag_integer =
 imag_float =
     | imag_float
 
+string =
+    | string
+
+byte_string =
+    | byte_string
+
+prefixed_string =
+    | prefixed_string
+
+
+
+

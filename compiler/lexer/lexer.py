@@ -1,9 +1,17 @@
 """
 An implementation of Viper's tokenizer
 
-NOTE: May turn lex function into a generator in the future to support generating tokens on demand.
-    Certain lexer errors may be caused by invalid syntax, but the lexer error shows first because
-    it comes before the parser.
+NOTE:
+    May turn lex function into a generator in the future to support generating tokens on demand.
+
+    As noted¹ by some, certain lexer errors may be caused by invalid syntax, but the lexer error
+    shows first because it comes before the parser.
+
+    In addition to lex function becoming a generator, may also change Parser.code to an generator
+    to be gotten on demand.
+
+    This has the benefit of not keeping everything in memory in case of lex / parse becomes
+    unsuccessful.
 
     1. https://medium.com/@gvanrossum_83706/building-a-peg-parser-d4869b5958fb#2a80
 """
@@ -794,6 +802,9 @@ class Lexer:
     def lex_prefixed_string(self, prefix, triple_quote_delimiter, is_byte_string):
         """
         Checks if the next set of bytes starts a prefixed string
+
+        TODO: Handle escape sequence.
+        TODO: Handle string formatting.
         """
         token = ""
         token_kind = TokenKind.PREFIXED_STRING
@@ -822,7 +833,6 @@ class Lexer:
         those delimiters
 
         TODO: Handle escape sequence.
-        TODO: Handle string formatting.
         """
         is_long_string = delimiter == "'''" or delimiter == '"""'
         token = ""
