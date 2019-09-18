@@ -62,7 +62,7 @@ RPython is quite similar to this project, but the developers have [made it clear
     pipenv run pytest
     ```
 
-### 🛠 USAGE
+### USAGE
 - Show help info
     ```sh
     viper --help
@@ -76,7 +76,7 @@ RPython is quite similar to this project, but the developers have [made it clear
 ### LICENSE
 [Apache License 2.0](LICENSE)
 
-### Attributions
+##### ATTRIBUTIONS
 Current logo made by [Freepik](https://www.freepik.com)
 
 <sup><sup><sub><sub>[Viper](#README.md) is to [Python](https://github.com/python/cpython) what [Crystal](https://github.com/crystal-lang/crystal) is to [Ruby](https://github.com/ruby/ruby)<sub></sub></sup></sup>
