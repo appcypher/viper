@@ -1,0 +1,10 @@
+def map(arr, f):
+    result = []
+
+    for i in arr:
+        result.append(f(i))
+
+    return result
+
+
+map([1, 2, 3, 4], lambda x: x * x)
