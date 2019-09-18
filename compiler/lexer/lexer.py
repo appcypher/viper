@@ -281,8 +281,8 @@ class Lexer:
                     indent_space_type = self.indent_space_type
 
                     if prev_space and (
-                        (indent_space_type == IndentSpaceKind.SPACE and prev_space != ' ') or
-                        (indent_space_type == IndentSpaceKind.TAB and prev_space != '\t')
+                        (indent_space_type == IndentSpaceKind.SPACE and prev_space != ' ')
+                        or (indent_space_type == IndentSpaceKind.TAB and prev_space != '\t')
                     ):
                         raise LexerError(
                             "Unexpected mix of different types of spaces in indentation",

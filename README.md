@@ -7,7 +7,7 @@
 
 <h1 align="center">VIPER</h1>
 
-### 👋 INTRODUCTION
+### INTRODUCTION
 Viper is a restricted subset of Python 3.x (with extra features) amenable to static analysis. The repository both defines the spec of the language and contains a reference implementation of the compiler, which compiles a legal Viper code to WebAssembly.
 
 **Viper does not maintain semantic compatibility with Python**. Several dynamic elements known of Python are not available in Viper. For example, Viper doesn't have runtime module modification.
@@ -20,7 +20,7 @@ Also unlike Nim, Boo and Cobra, Viper tries to stick to Python syntax and semant
 
 RPython is quite similar to this project, but the developers have [made it clear](https://rpython.readthedocs.io/en/latest/faq.html#do-i-have-to-rewrite-my-programs-in-rpython) several times their goal is not to make RPython a standalone language.
 
-### ⚙️ SETTING UP THE PROJECT
+### SETTING UP THE PROJECT
 ##### REQUIREMENTS
 - [Python 3.7+](https://www.python.org/downloads/) - Python interpreter
 - [Pipenv](https://docs.pipenv.org/en/latest/install/#installing-pipenv) - Python package manager
@@ -52,7 +52,7 @@ RPython is quite similar to this project, but the developers have [made it clear
     viper samples/class.vi
     ```
 
-### ✅ TESTING
+### TESTING
 ##### REQUIREMENTS
 - Same as [setting up the project](#setting-up-the-project)
 
@@ -73,7 +73,7 @@ RPython is quite similar to this project, but the developers have [made it clear
     viper samples/class.vi
     ```
 
-### 🤝 LICENSE
+### LICENSE
 [Apache License 2.0](LICENSE)
 
 

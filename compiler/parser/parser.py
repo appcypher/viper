@@ -26,7 +26,8 @@ class Parser:
 
     It is designed to have the follwing properties:
     - Results of all paths taken are memoized.
-    - A parser function result should often be an AST. Avoid returning parse trees.
+    - A parser function result should often be an AST. Avoid returning parse trees as much as
+        possible.
     - A parser function result should not hold values, but references to token elements.
     """
 
@@ -38,6 +39,16 @@ class Parser:
         self.column = -1
         self.cache = {}
 
+    def from_code(code):
+        """
+        Creates a parser from code.
+        """
+        from ..lexer.lexer import Lexer
+
+        tokens = Lexer(code).lex()
+
+        return Parser(tokens)
+
     def get_line_info(self):
         return self.row, self.column
 
@@ -48,7 +59,7 @@ class Parser:
         """
 
         def wrapper(self, *args):
-            # Get important parser state before parsing
+            # Get important parser state before parsing.
             cursor, row, column = self.cursor, *self.get_line_info()
 
             parser_result = parser(self, *args)
@@ -63,7 +74,6 @@ class Parser:
 
         return wrapper
 
-    @backtrackable
     def memoize(parser):
         """
         A decorator that memoizes the result of a recursive decent parser.
@@ -105,32 +115,33 @@ class Parser:
 
     def eat_token(self):
         """
-        Returns the next token and advances the cursor position
+        Returns the next token and its index then advances the cursor position
         """
         if self.cursor + 1 < self.tokens_length:
             self.cursor += 1
+            token = self.tokens[self.cursor]
 
-            token = self.code[self.cursor]
-
+            # Update row and column
             self.column = token.column
             self.row = token.row
 
-            return token
+            return (self.cursor, token)
 
         return None
 
-    def consume_string(string):
+    def consume_string(self, string):
         """
-        Consumes and check if the next token matches the string argument.
-
-        NOTE:
-            Not bactrackable, because it is going to be called by backtrackable function
-            like parse_all anyway.
+        Consumes and checks if the next token and its index if it matches the string argument.
         """
-        token = self.eat_token()
+        if self.cursor + 1 < self.tokens_length:
+            token = self.tokens[self.cursor + 1]
 
-        if token and token.data == string:
-            return token
+            if token.data == string:
+                self.cursor += 1
+                self.column = token.column
+                self.row = token.row
+
+                return (self.cursor, token)
 
         return None
 
@@ -163,10 +174,11 @@ class Parser:
         return result
 
     @backtrackable
-    def opt_more(*args, ignores=()):
+    def opt_more(self, *args, ignores=()):
         """
-        A helper function for (greedily) consuming zero or more tokens using parsers passed to it.
-        This function is corresponds with PEG's `+`.
+        A helper function for (greedily) consuming zero or more tokens based on pattern the
+        parsers expect.
+        This function corresponds with PEG's `*`.
         """
         result = []
 
@@ -181,10 +193,11 @@ class Parser:
         return parser_result
 
     @backtrackable
-    def more(*args, ignores=()):
+    def more(self, *args, ignores=()):
         """
-        A helper function for (greedily) consuming one or more tokens using parsers passed to it.
-        This function is corresponds with PEG's `+`.
+        A helper function for (greedily) consuming one or more tokens based on pattern the
+        parsers expect.
+        This function corresponds with PEG's `+`.
         """
         result = []
 
@@ -199,9 +212,13 @@ class Parser:
 
         return result
 
-
     @backtrackable
-    def alt(*args, ignores=()):
+    def alt(self, *args, ignores=()):
+        """
+        A helper function for trying alternative patterns. It short cricuits.
+        This function corresponds with PEG's `|`.
+        """
+
         result = None
 
         for arg in args:
@@ -211,8 +228,8 @@ class Parser:
             else:
                 parser_result = arg()
 
-            # If parser result isn't okay, break out of loop
-            if parser_result:
+            # If parser result is okay, break out of loop
+            if parser_result is not None:
                 # Skip the results of arguments that are in the `ignores` list
                 if arg not in ignores:
                     result = parser_result
@@ -221,15 +238,51 @@ class Parser:
 
         return result
 
+    def and_(self, *args, ignores=()):
+        """
+        A helper function checks if a pattern comes next. It is meant to peek not consume.
+        This function corresponds with PEG's `&`.
+        """
 
-    # and not alt
+        # Get important parser state before parsing
+        cursor, row, column = self.cursor, *self.get_line_info()
 
+        parser_result = self.parse_all(self, *args, ignores)
+
+        # Revert parser state
+        self.cursor = cursor
+        self.row = row
+        self.column = column
+
+        return parser_result
+
+    def not_(self, *args, ignores=()):
+        """
+        A helper function checks if a pattern does not come next. It is meant to peek not consume.
+        This function corresponds with PEG's `!`.
+        """
+
+        # Get important parser state before parsing
+        cursor, row, column = self.cursor, *self.get_line_info()
+
+        parser_result = self.parse_all(self, *args, ignores)
+
+        # Revert parser state
+        self.cursor = cursor
+        self.row = row
+        self.column = column
+
+        return None if parser_result is not None else True
+
+    @backtrackable
     @memoize
     def parse_name(self):
-        token = self.eat_token()
+        """
+        Parses an identifier
+        """
+        payload = self.eat_token()
 
-        if token and token.kind != TokenKind.IDENTIFIER:
-            return token
+        if payload and payload[1].kind == TokenKind.IDENTIFIER:
+            return payload[0]
 
         return None
-
