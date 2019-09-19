@@ -5,3 +5,4 @@ class WasmGenerator:
 
     def generate(self):
         buffer = []
+        return buffer
