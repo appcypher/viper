@@ -77,11 +77,7 @@ class Parser:
     def memoize(parser):
         """
         A decorator that memoizes the result of a recursive decent parser.
-
-        NOTE:
-            Since this memoize function wraps and returns a parser the bactrackable decorator
-            affects the output parser, not the memoization process. This gives any parser
-            memoize wraps the ability to backtrack on fail.
+        It also reuses cache if available before running the parser.
         """
 
         def wrapper(self, *args):
@@ -94,20 +90,23 @@ class Parser:
 
             if cursor_key:
                 try:
-                    return cursor_key[parser_name]
+                    result = cursor_key[parser_name]
+                    self.cursor = result[1]
+                    return result[0]
                 except KeyError:
                     pass
 
             # Otherwise go ahead and parse, then cache result
             parser_result = parser(self, *args)
+            skip = self.cursor
 
             if not cursor_key:
-                self.cache[cursor] = {parser_name: parser_result}
+                self.cache[cursor] = {parser_name: (parser_result, skip)}
             else:
                 try:
                     cursor_key[parser_name]
                 except KeyError:
-                    self.cache[cursor][parser_name] = parser_result
+                    self.cache[cursor][parser_name] = (parser_result, skip)
 
             return parser_result
 
@@ -131,7 +130,7 @@ class Parser:
 
     def consume_string(self, string):
         """
-        Consumes and checks if the next token and its index if it matches the string argument.
+        Consumes and checks if the next token index if it matches the string argument.
         """
         if self.cursor + 1 < self.tokens_length:
             token = self.tokens[self.cursor + 1]
@@ -141,7 +140,7 @@ class Parser:
                 self.column = token.column
                 self.row = token.row
 
-                return (self.cursor, token)
+                return self.cursor
 
         return None
 
@@ -217,6 +216,8 @@ class Parser:
         """
         A helper function for trying alternative patterns. It short cricuits.
         This function corresponds with PEG's `|`.
+
+        TODO: return a tuple of parser_result and choice index.
         """
 
         result = None
@@ -274,15 +275,87 @@ class Parser:
 
         return None if parser_result is not None else True
 
-    @backtrackable
-    @memoize
-    def parse_name(self):
+    def consume(self, *args):
         """
-        Parses an identifier
+        Checks and consumes the next token if it is of the TokenKinds passed to the function
         """
         payload = self.eat_token()
 
-        if payload and payload[1].kind == TokenKind.IDENTIFIER:
+        if payload and payload[1].kind in args:
             return payload[0]
 
         return None
+
+    @backtrackable
+    @memoize
+    def parse_identifier(self):
+        """
+        Parses identifiers
+        """
+        return self.consume(TokenKind.IDENTIFIER)
+
+    @backtrackable
+    @memoize
+    def parse_integer(self):
+        """
+        Parses integer literals
+        """
+        return self.consume(
+            TokenKind.DEC_INTEGER,
+            TokenKind.HEX_INTEGER,
+            TokenKind.BIN_INTEGER,
+            TokenKind.OCT_INTEGER,
+        )
+
+    @backtrackable
+    @memoize
+    def parse_float(self):
+        """
+        Parses floating point literals
+        """
+        return self.consume(TokenKind.DEC_FLOAT)
+
+    @backtrackable
+    @memoize
+    def parse_imag_integer(self):
+        """
+        Parses imaginary integer literals
+        """
+        return self.consume(TokenKind.DEC_INTEGER_IMAG)
+
+    @backtrackable
+    @memoize
+    def parse_imag_float(self):
+        """
+        Parses imaginary float literals
+        """
+        return self.consume(TokenKind.DEC_FLOAT_IMAG)
+
+    @backtrackable
+    @memoize
+    def parse_string(self):
+        """
+        Parses normal string literals
+        """
+        return self.consume(TokenKind.STRING)
+
+    @backtrackable
+    @memoize
+    def parse_byte_string(self):
+        """
+        Parses byte string literals
+        """
+        return self.consume(TokenKind.BYTE_STRING)
+
+    @backtrackable
+    @memoize
+    def parse_prefixed_string(self):
+        """
+        Parses prefixed string literals
+        """
+        return self.consume(TokenKind.PREFIXED_STRING)
+
+    @backtrackable
+    @memoize
+    def parse_(self):
+        pass
