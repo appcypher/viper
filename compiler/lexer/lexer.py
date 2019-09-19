@@ -577,7 +577,7 @@ class Lexer:
                         (char == "/" and peek_char0 == "/" and peek_char1 == "=")
                         or (char == ">" and peek_char0 == ">" and peek_char1 == "=")
                         or (char == "<" and peek_char0 == "<" and peek_char1 == "=")
-                        or (char == "*" and peek_char0 == "*" and peek_char1 == "=")
+                        or (char == "|" and peek_char0 == "|" and peek_char1 == "=")
                     )
                 ):
                     token += self.eat_char() + self.eat_char()
@@ -586,6 +586,7 @@ class Lexer:
                     (char == ">" and (peek_char0 == "=" or peek_char0 == ">"))
                     or (char == "<" and (peek_char0 == "=" or peek_char0 == "<"))
                     or (char == "/" and peek_char0 == "/")
+                    or (char == "|" and peek_char0 == "|")
                     or (char == "*" and peek_char0 == "*")
                 ):
                     token += self.eat_char()

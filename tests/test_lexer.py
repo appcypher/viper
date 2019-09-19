@@ -1,8 +1,3 @@
-"""
-TODO: Add more tests of code with multiple tokens
-"""
-
-
 from compiler.lexer.lexer import Lexer, Token, TokenKind, LexerError, IndentSpaceKind
 from pytest import raises
 
@@ -513,43 +508,45 @@ def test_lexer_tokenizes_valid_dec_imaginary_literal_successfully():
 def test_lexer_tokenizes_valid_operator_successfully():
     result0 = Lexer("+").lex()
     result1 = Lexer("-").lex()
-    result2 = Lexer("*").lex()
-    result3 = Lexer("**").lex()
-    result4 = Lexer("/").lex()
-    result5 = Lexer("//").lex()
-    result6 = Lexer("%").lex()
-    result8 = Lexer("<<").lex()
-    result9 = Lexer(">>").lex()
-    result10 = Lexer("&").lex()
-    result11 = Lexer("|").lex()
-    result12 = Lexer("^").lex()
-    result13 = Lexer("~").lex()
-    result14 = Lexer("<").lex()
-    result15 = Lexer(">").lex()
-    result16 = Lexer("<=").lex()
-    result17 = Lexer(">=").lex()
-    result18 = Lexer("==").lex()
-    result19 = Lexer("!=").lex()
+    result2 = Lexer("/").lex()
+    result3 = Lexer("*").lex()
+    result4 = Lexer("//").lex()
+    result5 = Lexer("%").lex()
+    result6 = Lexer("<<").lex()
+    result8 = Lexer(">>").lex()
+    result9 = Lexer("&").lex()
+    result10 = Lexer("|").lex()
+    result11 = Lexer("^").lex()
+    result12 = Lexer("~").lex()
+    result13 = Lexer("<").lex()
+    result14 = Lexer(">").lex()
+    result15 = Lexer("<=").lex()
+    result16 = Lexer(">=").lex()
+    result17 = Lexer("==").lex()
+    result18 = Lexer("!=").lex()
+    result19 = Lexer("||").lex()
+    result20 = Lexer("**").lex()
 
     assert result0 == [Token("+", TokenKind.OPERATOR, 0, 0)]
     assert result1 == [Token("-", TokenKind.OPERATOR, 0, 0)]
-    assert result2 == [Token("*", TokenKind.OPERATOR, 0, 0)]
-    assert result3 == [Token("**", TokenKind.OPERATOR, 0, 1)]
-    assert result4 == [Token("/", TokenKind.OPERATOR, 0, 0)]
-    assert result5 == [Token("//", TokenKind.OPERATOR, 0, 1)]
-    assert result6 == [Token("%", TokenKind.OPERATOR, 0, 0)]
-    assert result8 == [Token("<<", TokenKind.OPERATOR, 0, 1)]
-    assert result9 == [Token(">>", TokenKind.OPERATOR, 0, 1)]
-    assert result10 == [Token("&", TokenKind.OPERATOR, 0, 0)]
-    assert result11 == [Token("|", TokenKind.OPERATOR, 0, 0)]
-    assert result12 == [Token("^", TokenKind.OPERATOR, 0, 0)]
-    assert result13 == [Token("~", TokenKind.OPERATOR, 0, 0)]
-    assert result14 == [Token("<", TokenKind.OPERATOR, 0, 0)]
-    assert result15 == [Token(">", TokenKind.OPERATOR, 0, 0)]
-    assert result16 == [Token("<=", TokenKind.OPERATOR, 0, 1)]
-    assert result17 == [Token(">=", TokenKind.OPERATOR, 0, 1)]
-    assert result18 == [Token("==", TokenKind.OPERATOR, 0, 1)]
-    assert result19 == [Token("!=", TokenKind.OPERATOR, 0, 1)]
+    assert result2 == [Token("/", TokenKind.OPERATOR, 0, 0)]
+    assert result3 == [Token("*", TokenKind.OPERATOR, 0, 0)]
+    assert result4 == [Token("//", TokenKind.OPERATOR, 0, 1)]
+    assert result5 == [Token("%", TokenKind.OPERATOR, 0, 0)]
+    assert result6 == [Token("<<", TokenKind.OPERATOR, 0, 1)]
+    assert result8 == [Token(">>", TokenKind.OPERATOR, 0, 1)]
+    assert result9 == [Token("&", TokenKind.OPERATOR, 0, 0)]
+    assert result10 == [Token("|", TokenKind.OPERATOR, 0, 0)]
+    assert result11 == [Token("^", TokenKind.OPERATOR, 0, 0)]
+    assert result12 == [Token("~", TokenKind.OPERATOR, 0, 0)]
+    assert result13 == [Token("<", TokenKind.OPERATOR, 0, 0)]
+    assert result14 == [Token(">", TokenKind.OPERATOR, 0, 0)]
+    assert result15 == [Token("<=", TokenKind.OPERATOR, 0, 1)]
+    assert result16 == [Token(">=", TokenKind.OPERATOR, 0, 1)]
+    assert result17 == [Token("==", TokenKind.OPERATOR, 0, 1)]
+    assert result18 == [Token("!=", TokenKind.OPERATOR, 0, 1)]
+    assert result19 == [Token("||", TokenKind.OPERATOR, 0, 1)]
+    assert result20 == [Token("**", TokenKind.OPERATOR, 0, 1)]
 
 
 def test_lexer_tokenizes_valid_delimiter_successfully():
@@ -578,7 +575,7 @@ def test_lexer_tokenizes_valid_delimiter_successfully():
     result23 = Lexer("^=").lex()
     result24 = Lexer(">>=").lex()
     result25 = Lexer("<<=").lex()
-    result26 = Lexer("**=").lex()
+    result26 = Lexer("||=").lex()
 
     assert result0 == [Token("(", TokenKind.DELIMITER, 0, 0)]
     assert result1 == [Token(")", TokenKind.DELIMITER, 0, 0)]
@@ -605,7 +602,7 @@ def test_lexer_tokenizes_valid_delimiter_successfully():
     assert result23 == [Token("^=", TokenKind.DELIMITER, 0, 1)]
     assert result24 == [Token(">>=", TokenKind.DELIMITER, 0, 2)]
     assert result25 == [Token("<<=", TokenKind.DELIMITER, 0, 2)]
-    assert result26 == [Token("**=", TokenKind.DELIMITER, 0, 2)]
+    assert result26 == [Token("||=", TokenKind.DELIMITER, 0, 2)]
 
 
 def test_lexer_fails_with_single_exclamation_mark():
