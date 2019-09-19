@@ -1,4 +1,4 @@
-name =
+identifier =
     | identifier
 
 integer =
@@ -25,6 +25,173 @@ byte_string =
 prefixed_string =
     | prefixed_string
 
+power_expr =
+    | atom_expr ('^' unary_expr)?
 
+unary_expr =
+    | ('+' | '-' | '~') unary_expr
+    | power_expr
 
+mul_expr =
+    | unary_expr (('*' | '@' | '/' | '%' | '//') unary_expr)*
 
+sum_expr =
+    | mul_expr (('+' | '-') mul_expr)*
+
+shift_expr =
+    | sum_expr (('<<' | '>>') sum_expr)*
+
+and_expr =
+    | shift_expr ('&' shift_expr)*
+
+xor_expr =
+    | and_expr ('||' and_expr)*
+
+or_expr =
+    | xor_expr ('|' expr)*
+
+comparison_op =
+    | '<'
+    | '>'
+    | '=='
+    | '>='
+    | '<='
+    | '!='
+    | 'in'
+    | 'not' 'in'
+    | 'is'
+    | 'is' 'not'
+
+comparison_expr =
+    | or_expr (comparison_op or_expr)*
+
+not_test =
+    | 'not' not_test
+    | comparison_expr
+
+and_test =
+    | not_test ('and' not_test)*
+
+or_test =
+    | and_test ('or' and_test)*
+
+test =
+    | or_test ('if' expr 'else' expr)?
+
+lambda_expr_def =
+    | 'lambda' func_params? ':' expr
+
+expr =
+    | test
+    | lambda_expr_def
+
+exprs =
+    | expr (',' expr)* ','?
+
+list_rest_expr =
+    | '*'? expr
+
+rest_expr =
+    | ('*' | '**')? expr
+
+rest_exprs =
+    | rest_expr (',' rest_expr)* ','?
+
+lambda_block_def =
+    | 'lambda' func_params? ':' func_suite
+
+indentable_expr =
+    | expr
+    | lambda_block_def
+
+indentable_exprs =
+    | indentable_expr (',' indentable_expr)* ','?
+
+rest_indentable_expr =
+    | ('*' | '**')? indentable_expr
+
+rest_indentable_exprs =
+    | rest_indentable_expr (',' rest_indentable_expr)* ','?
+
+sync_comprehension_for =
+    | 'for' indentable_exprs 'in' expr
+
+comprehension_if =
+    | 'if' indentable_exprs
+
+comprehension_for =
+    | 'async'? sync_comprehension_for
+
+comprehension_iter =
+    | comprehension_for
+    | comprehension_if
+
+indentable_exprs_or_comprehension =
+    | rest_indentable_expr comprehension_for comprehension_iter*
+    | rest_indentable_expr (',' rest_indentable_expr)* ','?
+
+yield_argument =
+    | 'from' indentable_expr
+    | indentable_exprs
+
+yield_expr =
+    | 'yield' yield_argument?
+
+expr_suite =
+    | indentable_expr
+    | INDENT indentable_expr DEDENT
+
+dict_or_set =
+    | (test ':' expr_suite | rest_indentable_expr) comprehension_for comprehension_iter*
+    | test ':' expr_suite (',' test ':' expr_suite)* ','?
+
+subscript =
+    | test? ':' test? (':' test?)?
+    | test
+
+subscripts =
+    | subscript (',' subscript)* ','?;
+
+atom =
+    | '(' (yield_expr | indentable_exprs_or_comprehension)? ')'
+    | '[' indentable_exprs_or_comprehension? ']'
+    | '{' dict_or_set? '}'
+    | identifier
+    | float
+    | string+
+    | 'None'
+    | 'True'
+    | 'False'
+
+names =
+    | identifier (',' identifier)* ','?
+
+arguments =
+    | rest_indentable_expr
+    | identifier '=' indentable_expr
+
+trailer =
+    | '(' arguments? ')'
+    | '[' subscripts ']'
+    | '.' identifier
+
+atom_expr =
+    | 'await'? atom trailer*;
+
+class_params =
+    | ...
+
+class_suite =
+    | ...
+
+class_def = TODO
+    | 'class' identifier ('(' names? ')')? ':' class_suite
+
+func_params =
+    | ...
+
+func_suite =
+    | ...
+
+func_def =
+    | ...
