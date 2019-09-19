@@ -10,7 +10,7 @@
 ### INTRODUCTION
 Viper is a restricted subset of Python 3.x (with extra features) amenable to static analysis. The repository both defines the spec of the language and contains a reference implementation of the compiler, which compiles a legal Viper code to WebAssembly.
 
-**Viper does not maintain semantic compatibility with Python**. Several dynamic elements known of Python are not available in Viper. For example, Viper doesn't have runtime module modification.
+**Viper will not maintain complete syntactic and semantic compatibility with Python**. Several dynamic elements known of Python are not available in Viper. For example, Viper doesn't have runtime module modification.
 
 There are other similarly oriented projects, but they are all objectively different from Viper.
 
@@ -76,7 +76,8 @@ RPython is quite similar to this project, but the developers have [made it clear
 ### LICENSE
 [Apache License 2.0](LICENSE)
 
-##### ATTRIBUTIONS
-Current logo made by [Freepik](https://www.freepik.com)
+Attributions can be found [here](#ATTRIBUTIONS.ms)
+
+
 
 <sup><sup><sub><sub>[Viper](#README.md) is to [Python](https://github.com/python/cpython) what [Crystal](https://github.com/crystal-lang/crystal) is to [Ruby](https://github.com/ruby/ruby)<sub></sub></sup></sup>
