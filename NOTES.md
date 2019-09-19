@@ -1024,9 +1024,14 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
     binf = 0b11.3e+1
     ```
 
-- Change the semantics of ^ to mean power and deprecate **
+- Change the semantics of ^ to mean power and deprecate ** [IN PROGRESS]
     ```py
     2 ^ 5 == 25
+    ```
+
+    Change xor operator
+    ```py
+    0b101 || 0b011 == 0b001
     ```
 
 - Vectorization
