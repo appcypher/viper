@@ -374,7 +374,7 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
         return int
     ```
 
-#### SEMANTIC DIVERGENCE FROM PYTHON
+#### SYNTACTIC AND SEMANTIC DIVERGENCE FROM PYTHON
 
 - Eval / exec
     - Use of eval / exec
@@ -424,7 +424,7 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
         """
         ```
 
-    - `vars` and `__dict__` return named tuples
+    - `vars` return named tuples
         ```py
         print(vars(john)) # (name='John', age=45)
         ```
@@ -491,7 +491,7 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
         named_tup = (one=1, two=2, three=3)
 
         some_func(*tup)
-        some_func(*named_tup)
+        some_func(**named_tup)
 
         """
         ERROR
@@ -733,7 +733,57 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
     list(y) # [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
     ```
 
+- Classes
 
+    - Class bodies can't contain arbitrary expression. They can only contain bindings and function definitions.
+
+    - Class base class parameters can only be identifiers.
+
+    ```py
+    class Test():
+        test = 5
+        """
+        ERROR
+
+        5 + 500
+        lambda x: x
+        match x:
+            5 : 200
+            _ : 300
+        """
+
+        def foo(self):
+            pass
+
+    """
+    ERROR
+
+    class Test(object=70):
+        pass
+    """
+    ```
+
+- Exception handling
+
+    - except argument must be statically-known type.
+
+    ```py
+    try:
+        raise TypeError()
+    except TypeError as e:
+        print(e)
+
+    """
+    ERROR
+
+    get_error_class = lambda: TypeError
+
+    try:
+        raise TypeError()
+    except get_error_class() as e:
+        print(e)
+    """
+    ```
 
 ## CODE GENERATION
 
@@ -913,7 +963,7 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
     num3 = val num2
     ```
 
-- New named_tuple syntax
+- New named tuple syntax
     ```py
     named_tup = (name="James", age=10)
     named_tup.name

@@ -54,8 +54,8 @@ class Parser:
 
     def backtrackable(parser):
         """
-        A decorator that changes the parser state to it's original state before a parser function
-        is called and failed (i.e. returns None).
+        A decorator that changes the parser state to it's original state just before a parser
+        function failed (i.e. returns None).
         """
 
         def wrapper(self, *args):
