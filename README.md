@@ -8,13 +8,13 @@
 <h1 align="center">VIPER</h1>
 
 ### INTRODUCTION
-Viper is a restricted subset of Python 3.x (with extra features) amenable to static analysis. The repository both defines the spec of the language and contains a reference implementation of the compiler, which compiles a legal Viper code to WebAssembly.
+Viper is a language with Python 3.x syntax that is amenable to static analysis. The repository both defines the spec of the language and contains a reference implementation of the compiler, which compiles a legal Viper code to WebAssembly.
 
 **Viper will not maintain complete syntactic and semantic compatibility with Python**. Several dynamic elements known of Python are not available in Viper. For example, Viper doesn't have runtime module modification.
 
 There are other similarly oriented projects, but they are all objectively different from Viper.
 
-MicroPython is a well-optimized Python interpreter (with some JIT support) while Nuitka compiles Python to C. These two projects still allow dynamic aspects of Python, which means their performances may suffer from dynamically aspects of a program.
+MicroPython is a well-optimized Python interpreter (with some JIT support) while Nuitka compiles Python to C. These two projects still allow dynamic aspects of Python, which means their performances may suffer from those parts.
 
 Also unlike Nim, Boo and Cobra, Viper tries to stick to Python syntax and semantics as much as possible and wherever it makes sense.
 
