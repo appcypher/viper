@@ -35,7 +35,7 @@ prefixed_string =
     | prefixed_string
 
 power_expr =
-    | atom_expr ('^' unary_expr)?
+    | '√'? atom_expr ('^' unary_expr | '²')?
 
 unary_expr =
     | ('+' | '-' | '~')* power_expr
@@ -84,7 +84,7 @@ or_test =
 
 test =
     | or_test ('if' expr 'else' expr)?
-
+------------------------------------------------------------------
 lambda_param =
     | name ('=' expr)?
 
@@ -129,15 +129,15 @@ rest_indentable_exprs =
 sync_comprehension_for =
     | 'for' lhs 'in' indentable_expr
 
-comprehension_if =
-    | 'if' indentable_exprs
+comprehension_where =
+    | 'where' indentable_exprs
 
 comprehension_for =
     | 'async'? sync_comprehension_for
 
 comprehension_iter =
     | comprehension_for
-    | comprehension_if
+    | comprehension_where
 
 indentable_exprs_or_comprehension =
     | rest_indentable_expr comprehension_for comprehension_iter*
@@ -206,11 +206,14 @@ except_clause =
 finally_clause =
     | 'finally' ':' func_suite
 
+where_clause =
+    | 'where' expr
+
 for_statement =
-    | 'for' lhs 'in' exprs ':' func_suite else_clause?
+    | 'for' lhs 'in' exprs where_clause? ':' func_suite else_clause?
 
 while_statement =
-    | 'while' expr ':' func_suite else_clause?
+    | 'while' expr where_clause? ':' func_suite else_clause?
 
 elif_clause =
     | 'elif' test ':' func_suite
@@ -227,7 +230,7 @@ type =
 
 class_suite =
     | assignment_statement
-    | indent (import_statement | assignment_statement | class_def | 'async'? func_def)+ dedent
+    | indent (import_statement | assignment_statement | class_def | 'async'? func_def | string)+ dedent
 
 class_def = TODO
     | 'class' identifier ('{' type (',' type)* ','? '}')? ('(' identifiers? ')')? ':' class_suite
@@ -249,8 +252,8 @@ func_param =
     | identifier (':' type)? ('=' indentable_expr)?
 
 func_params =
-    | func_param (',' func_param)* (',' '*' func_param)? (',' '**' func_param)? ','?
-    | '*' func_param (',' '**' func_param)? ','?
+    | func_param (',' func_param)* (',' '*' func_param (',' func_param)*)? (',' '**' func_param)? ','?
+    | '*' func_param (',' func_param)* (',' '**' func_param)? ','?
     | '**' func_param ','?
 
 func_suite =
