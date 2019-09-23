@@ -1,7 +1,25 @@
 """
 A packrat parser for parsing Viper's syntax.
+
+Check `compiler/parser/parser.grammar` for the language's parser grammar specification.
 """
 from ..lexer.lexer import TokenKind
+from .ast import (
+    Newline,
+    Indent,
+    Dedent,
+    Identifier,
+    Integer,
+    Float,
+    ImagInteger,
+    ImagFloat,
+    String,
+    ByteString,
+    PrefixedString,
+    Operator,
+    UnaryExpr,
+    BinaryExpr,
+)
 
 
 class ParserError(Exception):
@@ -26,8 +44,6 @@ class Parser:
 
     It is designed to have the follwing properties:
     - Results of all paths taken are memoized.
-    - A parser function result should often be an AST. Avoid returning parse trees as much as
-        possible.
     - A parser function result should not hold values, but references to token elements.
     """
 
@@ -39,6 +55,10 @@ class Parser:
         self.column = -1
         self.cache = {}
 
+    def __repr__(self):
+        return f"Parser(tokens={self.tokens})"
+
+    @staticmethod
     def from_code(code):
         """
         Creates a parser from code.
@@ -51,6 +71,38 @@ class Parser:
 
     def get_line_info(self):
         return self.row, self.column
+
+    def eat_token(self):
+        """
+        Returns the next token and its index then advances the cursor position
+        """
+        if self.cursor + 1 < self.tokens_length:
+            self.cursor += 1
+            token = self.tokens[self.cursor]
+
+            # Update row and column
+            self.column = token.column
+            self.row = token.row
+
+            return (self.cursor, token)
+
+        return None
+
+    def consume_string(self, string):
+        """
+        Consumes and checks if next token holds the same date as `string`.
+        """
+        if self.cursor + 1 < self.tokens_length:
+            token = self.tokens[self.cursor + 1]
+
+            if token.data == string:
+                self.cursor += 1
+                self.column = token.column
+                self.row = token.row
+
+                return self.cursor
+
+        return None
 
     def backtrackable(parser):
         """
@@ -112,179 +164,189 @@ class Parser:
 
         return wrapper
 
-    def eat_token(self):
-        """
-        Returns the next token and its index then advances the cursor position
-        """
-        if self.cursor + 1 < self.tokens_length:
-            self.cursor += 1
-            token = self.tokens[self.cursor]
+    # @backtrackable
+    # def parse_all(self, *args):
+    #     """
+    #     Takes an arguments of parser and strings (which it calls `consume_string` on) and
+    #     calls them. It fails if any of the parser fails.
+    #     `ignores` referes to the results of args to ingnore
+    #     """
 
-            # Update row and column
-            self.column = token.column
-            self.row = token.row
+    #     result = []
 
-            return (self.cursor, token)
+    #     for arg in args:
+    #         # Check if argument is a string or a parser function
+    #         if type(arg) == str:
+    #             parser_result = self.consume_string(arg)
+    #         else:
+    #             parser_result = arg()
 
-        return None
+    #         print('*****', parser_result)
 
-    def consume_string(self, string):
-        """
-        Consumes and checks if the next token index if it matches the string argument.
-        """
-        if self.cursor + 1 < self.tokens_length:
-            token = self.tokens[self.cursor + 1]
+    #         # If parser result isn't okay, break out of loop
+    #         if parser_result is None:
+    #             result = None
+    #             break
 
-            if token.data == string:
-                self.cursor += 1
-                self.column = token.column
-                self.row = token.row
+    #         result.append(parser_result)
 
-                return self.cursor
+    #     return result
 
-        return None
+    # @backtrackable
+    # def opt(self, *args):
+    #     """
+    #     A helper function for consuming tokens based on pattern the parsers expect.
+    #     The pattern is optional, so the parser passes even if the pattern fails.
+    #     This function corresponds with PEG's `?`.
+    #     """
 
-    @backtrackable
-    def parse_all(self, *args, ignores=()):
-        """
-        Takes an arguments of parser and strings (which it calls `consume_string` on) and
-        calls them. It fails if any of the parser fails.
-        `ignores` referes to the results of args to ingnore
-        """
+    #     result = self.parse_all(*args)
 
-        result = []
+    #     if result is None:
+    #         return []
 
-        for arg in args:
-            # Check if argument is a string or a parser function
-            if type(arg) == str:
-                parser_result = self.consume_string(arg)
-            else:
-                parser_result = arg()
+    #     return result
 
-            # If parser result isn't okay, break out of loop
-            if parser_result is None:
-                result = None
-                break
+    # @backtrackable
+    # def opt_more(self, *args):
+    #     """
+    #     A helper function for (greedily) consuming zero or more tokens based on pattern the
+    #     parsers expect.
+    #     This function corresponds with PEG's `*`.
+    #     """
+    #     result = []
 
-            # Skip the results of arguments that are in the `ignores` list
-            if arg not in ignores:
-                result.append(parser_result)
+    #     while True:
+    #         parser_result = self.parse_all(*args)
 
-        return result
+    #         if parser_result is None:
+    #             break
 
-    @backtrackable
-    def opt_more(self, *args, ignores=()):
-        """
-        A helper function for (greedily) consuming zero or more tokens based on pattern the
-        parsers expect.
-        This function corresponds with PEG's `*`.
-        """
-        result = []
+    #         result.append(parser_result)
 
-        while True:
-            parser_result = self.parse_all(*args, ignores)
+    #     return result
 
-            if parser_result is None:
-                break
+    # @backtrackable
+    # def more(self, *args):
+    #     """
+    #     A helper function for (greedily) consuming one or more tokens based on pattern the
+    #     parsers expect.
+    #     This function corresponds with PEG's `+`.
+    #     """
+    #     result = []
+    #     count = 0
 
-            result.append(parser_result)
+    #     while True:
+    #         parser_result = self.parse_all(*args)
 
-        return parser_result
+    #         if parser_result is None:
+    #             break
 
-    @backtrackable
-    def more(self, *args, ignores=()):
-        """
-        A helper function for (greedily) consuming one or more tokens based on pattern the
-        parsers expect.
-        This function corresponds with PEG's `+`.
-        """
-        result = []
+    #         result.append(parser_result)
+    #         count += 1
 
-        while True:
-            parser_result = self.parse_all(*args, ignores)
+    #     if count < 1:
+    #         result = None
 
-            if parser_result is None:
-                result = None
-                break
+    #     return result
 
-            result.append(parser_result)
+    # @backtrackable
+    # def alt(self, *args):
+    #     """
+    #     A helper function for trying alternative patterns. It short cricuits.
+    #     This function corresponds with PEG's `|`.
+    #     """
 
-        return result
+    #     result = None
 
-    @backtrackable
-    def alt(self, *args, ignores=()):
-        """
-        A helper function for trying alternative patterns. It short cricuits.
-        This function corresponds with PEG's `|`.
+    #     for index, arg in enumerate(args):
+    #         # Check if argument is a string or a parser function
+    #         if type(arg) == str:
+    #             parser_result = self.consume_string(arg)
+    #         else:
+    #             parser_result = arg()
 
-        TODO: return a tuple of parser_result and choice index.
-        """
+    #         # If parser result is okay, break out of loop
+    #         if parser_result is not None:
+    #             result = (index, parser_result)
+    #             break
 
-        result = None
+    #     return result
 
-        for arg in args:
-            # Check if argument is a string or a parser function
-            if type(arg) == str:
-                parser_result = self.consume_string(arg)
-            else:
-                parser_result = arg()
+    # def and_(self, *args):
+    #     """
+    #     A helper function checks if a pattern comes next. It is meant to peek not consume.
+    #     This function corresponds with PEG's `&`.
 
-            # If parser result is okay, break out of loop
-            if parser_result is not None:
-                # Skip the results of arguments that are in the `ignores` list
-                if arg not in ignores:
-                    result = parser_result
+    #     TODO: Not used. Remove.
+    #     """
 
-                break
+    #     # Get important parser state before parsing
+    #     cursor, row, column = self.cursor, *self.get_line_info()
 
-        return result
+    #     parser_result = self.parse_all(self, *args)
 
-    def and_(self, *args, ignores=()):
-        """
-        A helper function checks if a pattern comes next. It is meant to peek not consume.
-        This function corresponds with PEG's `&`.
-        """
+    #     # Revert parser state
+    #     self.cursor = cursor
+    #     self.row = row
+    #     self.column = column
 
-        # Get important parser state before parsing
-        cursor, row, column = self.cursor, *self.get_line_info()
+    #     return parser_result
 
-        parser_result = self.parse_all(self, *args, ignores)
+    # def not_(self, *args):
+    #     """
+    #     A helper function checks if a pattern does not come next. It is meant to peek not consume.
+    #     This function corresponds with PEG's `!`.
 
-        # Revert parser state
-        self.cursor = cursor
-        self.row = row
-        self.column = column
+    #     TODO: Not used. Remove.
+    #     """
 
-        return parser_result
+    #     # Get important parser state before parsing
+    #     cursor, row, column = self.cursor, *self.get_line_info()
 
-    def not_(self, *args, ignores=()):
-        """
-        A helper function checks if a pattern does not come next. It is meant to peek not consume.
-        This function corresponds with PEG's `!`.
-        """
+    #     parser_result = self.parse_all(self, *args)
 
-        # Get important parser state before parsing
-        cursor, row, column = self.cursor, *self.get_line_info()
+    #     # Revert parser state
+    #     self.cursor = cursor
+    #     self.row = row
+    #     self.column = column
 
-        parser_result = self.parse_all(self, *args, ignores)
+    #     return None if parser_result is not None else True
 
-        # Revert parser state
-        self.cursor = cursor
-        self.row = row
-        self.column = column
-
-        return None if parser_result is not None else True
-
-    def consume(self, *args):
+    def consume(self, *args, result_type):
         """
         Checks and consumes the next token if it is of the TokenKinds passed to the function
         """
         payload = self.eat_token()
 
         if payload and payload[1].kind in args:
-            return payload[0]
+            return result_type(payload[0])
 
         return None
+
+    @backtrackable
+    @memoize
+    def parse_newline(self):
+        """
+        Parses normal string literals
+        """
+        return self.consume(TokenKind.NEWLINE, result_type=Newline)
+
+    @backtrackable
+    @memoize
+    def parse_indent(self):
+        """
+        Parses byte string literals
+        """
+        return self.consume(TokenKind.INDENT, result_type=Indent)
+
+    @backtrackable
+    @memoize
+    def parse_dedent(self):
+        """
+        Parses prefixed string literals
+        """
+        return self.consume(TokenKind.DEDENT, result_type=Dedent)
 
     @backtrackable
     @memoize
@@ -292,7 +354,7 @@ class Parser:
         """
         Parses identifiers
         """
-        return self.consume(TokenKind.IDENTIFIER)
+        return self.consume(TokenKind.IDENTIFIER, result_type=Identifier)
 
     @backtrackable
     @memoize
@@ -305,6 +367,7 @@ class Parser:
             TokenKind.HEX_INTEGER,
             TokenKind.BIN_INTEGER,
             TokenKind.OCT_INTEGER,
+            result_type=Integer,
         )
 
     @backtrackable
@@ -313,7 +376,7 @@ class Parser:
         """
         Parses floating point literals
         """
-        return self.consume(TokenKind.DEC_FLOAT)
+        return self.consume(TokenKind.DEC_FLOAT, result_type=Float)
 
     @backtrackable
     @memoize
@@ -321,7 +384,7 @@ class Parser:
         """
         Parses imaginary integer literals
         """
-        return self.consume(TokenKind.DEC_INTEGER_IMAG)
+        return self.consume(TokenKind.DEC_INTEGER_IMAG, result_type=ImagInteger)
 
     @backtrackable
     @memoize
@@ -329,7 +392,7 @@ class Parser:
         """
         Parses imaginary float literals
         """
-        return self.consume(TokenKind.DEC_FLOAT_IMAG)
+        return self.consume(TokenKind.DEC_FLOAT_IMAG, result_type=ImagFloat)
 
     @backtrackable
     @memoize
@@ -337,7 +400,7 @@ class Parser:
         """
         Parses normal string literals
         """
-        return self.consume(TokenKind.STRING)
+        return self.consume(TokenKind.STRING, result_type=String)
 
     @backtrackable
     @memoize
@@ -345,7 +408,7 @@ class Parser:
         """
         Parses byte string literals
         """
-        return self.consume(TokenKind.BYTE_STRING)
+        return self.consume(TokenKind.BYTE_STRING, result_type=ByteString)
 
     @backtrackable
     @memoize
@@ -353,9 +416,131 @@ class Parser:
         """
         Parses prefixed string literals
         """
-        return self.consume(TokenKind.PREFIXED_STRING)
+        return self.consume(TokenKind.PREFIXED_STRING, result_type=PrefixedString)
+
+    # @backtrackable
+    # @memoize
+    # def parse_power_expr(self):
+    #     """
+    #     """
+    #     parse_result = self.parse_all(
+    #         lambda: self.opt("√"),
+    #         self.parse_integer,  # TODO
+    #         lambda: self.opt(
+    #             lambda: self.alt(
+    #                 lambda: self.parse_all("^", self.parse_integer), "²"  # TODO
+    #             )
+    #         ),
+    #     )
+
+    #     if parse_result is None:
+    #         return None
+
+    #     opt_unary_root_op = parse_result[0]
+    #     result = parse_result[1]
+    #     opt_alt_power = parse_result[2]
+
+    #     if opt_alt_power != []:
+    #         if opt_alt_power[0][0] == 0:
+    #             binary_power_op = Operator(opt_alt_power[0][1][0])
+    #             binary_power_unary_expr = opt_alt_power[0][1][1]
+    #             result = BinaryExpr(result, binary_power_op, binary_power_unary_expr)
+
+    #         elif opt_alt_power[0][0] == 1:
+    #             unary_square_op = Operator(opt_alt_power[0][1])
+    #             result = UnaryExpr(result, unary_square_op)
+
+    #     if opt_unary_root_op != []:
+    #         result = UnaryExpr(result, Operator(opt_unary_root_op[0]))
+
+    #     return result
 
     @backtrackable
     @memoize
-    def parse_(self):
-        pass
+    def parse_power_expr(self):
+        """
+        rule = '√'? atom_expr ('^' unary_expr | '²')? [right associative]
+        """
+
+        root = self.consume_string('√')
+        result = self.parse_integer()
+
+        if result is None:
+            return None
+
+        power = self.consume_string('^')
+        integer2 = self.parse_integer()
+
+        if power is not None or integer2 is not None:
+            result = BinaryExpr(result, Operator(power), integer2)
+        else:
+            square = self.consume_string('²')
+            if square is not None:
+                result = UnaryExpr(result, Operator(square))
+
+        if root is not None:
+            result = UnaryExpr(result, Operator(root))
+
+        print(f'\n>>>> {result}')
+
+        return result
+
+    @backtrackable
+    @memoize
+    def parse_unary_expr(self):
+        """
+        rule = ('+' | '-' | '~')* power_expr [right associative]
+        """
+        unary_ops = []
+        while True:
+            unary_op = self.consume_string('+')
+            if unary_op is None:
+                unary_op = self.consume_string('-')
+                if unary_op is None:
+                    unary_op = self.consume_string('~')
+                    if unary_op is None:
+                        break
+            unary_ops.append(Operator(unary_op))
+
+        result = self.parse_power_expr()
+
+        if result is None:
+            return None
+
+        for unary_op in reversed(unary_ops):
+            result = UnaryExpr(result, unary_op)
+
+        print(f'\n>>>> {result}')
+
+        return result
+
+    @backtrackable
+    @memoize
+    def parse_mul_expr(self):
+        """
+        rule = unary_expr (('*' | '@' | '/' | '%' | '//') unary_expr)* [left associative]
+        """
+        result = self.parse_unary_expr()
+        while True:
+            mul_op = self.consume_string('*')
+            if mul_op is None:
+                mul_op = self.consume_string('@')
+                if mul_op is None:
+                    mul_op = self.consume_string('/')
+                    if mul_op is None:
+                        mul_op = self.consume_string('%')
+                        if mul_op is None:
+                            mul_op = self.consume_string('//')
+                            if mul_op is None:
+                                break
+            unary_expr = self.parse_unary_expr()
+
+            if unary_expr is None:
+                break
+
+            result = BinaryExpr(result, Operator(mul_op), unary_expr)
+
+        print(f'\n>>>> {result}')
+
+        return result
+
