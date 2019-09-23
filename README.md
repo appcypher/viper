@@ -18,7 +18,7 @@ MicroPython is a well-optimized Python interpreter (with some JIT support) while
 
 Also unlike Nim, Boo and Cobra, Viper tries to stick to Python syntax and semantics as much as possible and wherever it makes sense.
 
-RPython is quite similar to this project, but the developers have [made it clear](https://rpython.readthedocs.io/en/latest/faq.html#do-i-have-to-rewrite-my-programs-in-rpython) several times their goal is not to make RPython a standalone language.
+RPython is quite similar to this project, but the developers have [made it clear](https://rpython.readthedocs.io/en/latest/faq.html#do-i-have-to-rewrite-my-programs-in-rpython) that their goal is not to make RPython a standalone language.
 
 ### SETTING UP THE PROJECT
 ##### REQUIREMENTS
