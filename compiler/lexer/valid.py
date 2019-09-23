@@ -133,6 +133,8 @@ class Valid:
             # or char == ">="
             # or char == "=="
             # or char == "!="
+            or char == "²"
+            or char == "√"
         )
 
     def is_single_char_delimiter(char):

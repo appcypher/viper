@@ -1,5 +1,7 @@
 """
-An implementation of Viper's tokenizer
+An implementation of Viper's tokenizer.
+
+Check `compiler/lexer/lexer.grammar` for the language's lexer grammar specification.
 
 NOTE:
     May turn lex function into a generator in the future to support generating tokens on demand.
@@ -14,6 +16,9 @@ NOTE:
     unsuccessful.
 
     1. https://medium.com/@gvanrossum_83706/building-a-peg-parser-d4869b5958fb#2a80
+
+TODO:
+    - Regex literal lexing
 """
 
 from enum import Enum

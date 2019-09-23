@@ -526,6 +526,8 @@ def test_lexer_tokenizes_valid_operator_successfully():
     result18 = Lexer("!=").lex()
     result19 = Lexer("||").lex()
     result20 = Lexer("**").lex()
+    result21 = Lexer("²").lex()
+    result22 = Lexer("√").lex()
 
     assert result0 == [Token("+", TokenKind.OPERATOR, 0, 0)]
     assert result1 == [Token("-", TokenKind.OPERATOR, 0, 0)]
@@ -547,6 +549,8 @@ def test_lexer_tokenizes_valid_operator_successfully():
     assert result18 == [Token("!=", TokenKind.OPERATOR, 0, 1)]
     assert result19 == [Token("||", TokenKind.OPERATOR, 0, 1)]
     assert result20 == [Token("**", TokenKind.OPERATOR, 0, 1)]
+    assert result21 == [Token("²", TokenKind.OPERATOR, 0, 0)]
+    assert result22 == [Token("√", TokenKind.OPERATOR, 0, 0)]
 
 
 def test_lexer_tokenizes_valid_delimiter_successfully():
