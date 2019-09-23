@@ -763,6 +763,51 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
     """
     ```
 
+    - staticmethod and classmethod decorators are semantically different from Python versions because they are resolved at compile-time. So unlike Python, staticmethods and classmethods can be referenced directly within the class
+
+    ```py
+    class Person:
+        def __init__(self, name):
+            self.name = name
+
+        @classmethod
+        def from_tuple(Class, tup):
+            return Class(**tup)
+
+    class Student(Person):
+        def __init__(self, name, age):
+            super().__init__(name)
+            self.age = age
+
+        @decorator @staticmethod
+        def debug(f):
+            def wrapper(self):
+                if 'debug' in @features:
+                    (self)
+
+            return wrapper
+
+        @debug
+        def print(self):
+            return f"{type(self).__name__}{vars(self)}"
+
+    student = Student.from_tuple(
+        (name="Ajanaku", age=56)
+    )
+    ```
+
+    - Also unlike Python, all non-static non-class methods are instance methods and cannot be referenced directly, only through `self` or whatever the first parameter is to the instance method.
+
+    ```py
+        """
+        ERROR
+
+        class Test(object=70):
+            pass
+        """
+    ```
+
+
 - Exception handling
 
     - except argument must be statically-known type.
@@ -784,6 +829,29 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
         print(e)
     """
     ```
+
+- Comprehension
+
+    - `if` clauses in comprehensions are replaced by `where` clauses in Viper
+
+    ```py
+    odds = [i for i in range(10) where i % 2]
+    ```
+
+- Operators
+
+    - Viper's xor operator is '^' 
+
+    ```py
+    2 ^ 5 == 25
+    ```
+
+    - Viper's xor operator is '||'
+
+    ```py
+    0b101 || 0b011 == 0b001
+    ```
+
 
 ## CODE GENERATION
 
@@ -1050,7 +1118,7 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
     ```
 
 
-- Coefficient expression [IN PROGRESS]
+- Coefficient expression [WIP]
     ```py
     n = 4
     2n
@@ -1072,16 +1140,6 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
     hexf = 0x1f.3p+1
     octf = 0o16.3e+1
     binf = 0b11.3e+1
-    ```
-
-- Change the semantics of ^ to mean power and deprecate ** [IN PROGRESS]
-    ```py
-    2 ^ 5 == 25
-    ```
-
-    Change xor operator
-    ```py
-    0b101 || 0b011 == 0b001
     ```
 
 - Vectorization
@@ -1119,7 +1177,7 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
     ```
 
 
-- Where guard
+- Where clause [WIP]
     ```py
     for i in (1:20) where i % 2:
         print(i)
