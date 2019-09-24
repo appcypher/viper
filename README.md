@@ -76,7 +76,7 @@ RPython is quite similar to this project, but the developers have [made it clear
 ### LICENSE
 [Apache License 2.0](LICENSE)
 
-Attributions can be found [here](#ATTRIBUTIONS.ms)
+Attributions can be found [here](ATTRIBUTIONS.md)
 
 
 
