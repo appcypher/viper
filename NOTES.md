@@ -377,7 +377,8 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
 #### SYNTACTIC AND SEMANTIC DIVERGENCE FROM PYTHON
 
 - Eval / exec
-    - Use of eval / exec
+    - There is no of eval or exec in Viper.
+
         ```py
         eval('2 + 3')
         ```
@@ -385,6 +386,7 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
 - Introspection
 
     - Viper doesn't have a bytecode IR, but it does have a wasm codegen that one can introspect.
+
         ```py
         from dis import dis
 
@@ -399,9 +401,7 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
 
 - Type annotations
 
-    - Type annotations is used in semantic analysis
-
-        CPython doesn't take advantage of type annotations.
+    - Type annotations is used in semantic analysis. CPython doesn't take advantage of type annotations.
 
         ```py
         num: int = 50
@@ -413,9 +413,19 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
         """
         ```
 
+- Main
+
+    - Viper does not have the special `__name__` variable. Instead, Viper runs any top-level function with the name 'main' automatically.
+
+        ```py
+        def main(args):
+            print(args)
+        ```
+
 - Fields
 
-    - Deleting fields isn't supported
+    - Deleting fields isn't supported.
+
         ```py
         """
         ERROR
@@ -424,14 +434,16 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
         """
         ```
 
-    - `vars` return named tuples
+    - `vars` return named tuples.
+
         ```py
         print(vars(john)) # (name='John', age=45)
         ```
 
 - Tuples
 
-    - A tuple can only be indexed with a signed integer literal
+    - A tuple can only be indexed with a signed integer literal.
+
         ```py
         tup = (1, 2, 3)
         tup[0]
@@ -443,7 +455,8 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
         """
         ```
 
-    - A tuple element can be modified in Viper
+    - A tuple element can be modified in Viper.
+
         ```py
         tup = (1, 2, 3)
         tup[0] = 4
@@ -483,7 +496,8 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
 
 - Functions
 
-    - Vipers doesn't support spreading any iterable except tuples and named tuples as arguments to a function
+    - Vipers doesn't support spreading any iterable except tuples and named tuples as arguments to a function.
+
         ```py
         dc = { 'name': 'John', 'age': 45 }
         ls = [1, 2, 3]
@@ -501,7 +515,8 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
         """
         ```
 
-    - Functions that return nothing, don't return None implicitly
+    - Functions that return nothing, don't return None implicitly.
+
         ```py
         def foo():
             2 + 3
@@ -516,6 +531,7 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
 - Imports
 
     - Viper resolves imported modules at compile-time
+
         ```py
         name, age = "John", 45
 
@@ -527,6 +543,7 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
 - Variable
 
     - Viper doesn't support shadowing global variables or instance fields.
+
         ```py
         num = 10
         print(num)
@@ -559,6 +576,7 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
 - Integers
 
     - `int`s are represented as 64-bit signed integers.
+
         This means ints overflow when they exceed `-4_611_686_018_427_387_904 < x < 4_611_686_018_427_387_903` bounds.
 
         ```py
@@ -569,6 +587,7 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
 - StopIteration
 
     - Exception handling as a means of control flow is expensive.
+
         ```py
         for i in range(10):
             print(25)
@@ -585,6 +604,7 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
         In the case of generators, returning nothing marks the end of an iteration.
 
         - Iterables
+
             ```py
             class list:
                 def __iter__(self)
@@ -605,6 +625,7 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
             ```
 
         - Generators
+
             ```py
             def range(x: int):
                 count = 0
@@ -660,8 +681,7 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
 
 - Source file
 
-    - Multiple encoding support
-        Unlike CPython, Viper only support utf-8 files.
+    - Multiple encoding support. Unlike CPython, Viper only support UTF-8 files.
 
 
 - Scoping rules
@@ -670,7 +690,8 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
 
 - Literal
 
-    - Viper does not support upper case letters to signify literal base
+    - Viper does not support upper case letters to signify literal base.
+
         ```py
         bin_n = 0b10101
         oct_n = 0o17867
@@ -686,6 +707,7 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
         ```
 
     - Viper doesn't support the wide entire uppercase / reversed prefixes Python support in prefix strings.
+
         ```py
         r"Hello"
         u"Hello"
@@ -711,6 +733,7 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
         ```
 
     - Viper uses `im` for imaginary numbers
+
         ```py
         imag = 3 + 4im
         ```
@@ -721,17 +744,17 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
 
     - Generators are copyable and are passed by value
 
-    ```py
-    def get_nums():
-        for i in range(10):
-            yield i
+        ```py
+        def get_nums():
+            for i in range(10):
+                yield i
 
-    x = get_nums()
-    y = x
+        x = get_nums()
+        y = x
 
-    list(x) # [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
-    list(y) # [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
-    ```
+        list(x) # [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+        list(y) # [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+        ```
 
 - Classes
 
@@ -739,118 +762,118 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
 
     - Class base class parameters can only be identifiers.
 
-    ```py
-    class Test():
-        test = 5
-        """
-        ERROR
+        ```py
+        class Test():
+            test = 5
+            """
+            ERROR
 
-        5 + 500
-        lambda x: x
-        match x:
-            5 : 200
-            _ : 300
-        """
+            5 + 500
+            lambda x: x
+            match x:
+                5 : 200
+                _ : 300
+            """
 
-        def foo(self):
-            pass
+            def foo(self):
+                pass
 
-    """
-    ERROR
-
-    class Test(object=70):
-        pass
-    """
-    ```
-
-    - staticmethod and classmethod decorators are semantically different from Python versions because they are resolved at compile-time. So unlike Python, staticmethods and classmethods can be referenced directly within the class
-
-    ```py
-    class Person:
-        def __init__(self, name):
-            self.name = name
-
-        @classmethod
-        def from_tuple(Class, tup):
-            return Class(**tup)
-
-    class Student(Person):
-        def __init__(self, name, age):
-            super().__init__(name)
-            self.age = age
-
-        @decorator @staticmethod
-        def debug(f):
-            def wrapper(self):
-                if 'debug' in @features:
-                    (self)
-
-            return wrapper
-
-        @debug
-        def print(self):
-            return f"{type(self).__name__}{vars(self)}"
-
-    student = Student.from_tuple(
-        (name="Ajanaku", age=56)
-    )
-    ```
-
-    - Also unlike Python, all non-static non-class methods are instance methods and cannot be referenced directly, only through `self` or whatever the first parameter is to the instance method.
-
-    ```py
         """
         ERROR
 
         class Test(object=70):
             pass
         """
-    ```
+        ```
+
+    - staticmethod and classmethod decorators are semantically different from Python versions because they are resolved at compile-time. So unlike Python, staticmethods and classmethods can be referenced directly within the class
+
+        ```py
+        class Person:
+            def __init__(self, name):
+                self.name = name
+
+            @classmethod
+            def from_tuple(Class, tup):
+                return Class(**tup)
+
+        class Student(Person):
+            def __init__(self, name, age):
+                super().__init__(name)
+                self.age = age
+
+            @decorator @staticmethod
+            def debug(f):
+                def wrapper(self):
+                    if 'debug' in @features:
+                        (self)
+
+                return wrapper
+
+            @debug
+            def print(self):
+                return f"{type(self).__name__}{vars(self)}"
+
+        student = Student.from_tuple(
+            (name="Ajanaku", age=56)
+        )
+        ```
+
+    - Also unlike Python, all non-static non-class methods are instance methods and cannot be referenced directly, only through `self` or whatever the first parameter is to the instance method.
+
+        ```py
+            """
+            ERROR
+
+            class Test(object=70):
+                pass
+            """
+        ```
 
 
 - Exception handling
 
     - except argument must be statically-known type.
 
-    ```py
-    try:
-        raise TypeError()
-    except TypeError as e:
-        print(e)
+        ```py
+        try:
+            raise TypeError()
+        except TypeError as e:
+            print(e)
 
-    """
-    ERROR
+        """
+        ERROR
 
-    get_error_class = lambda: TypeError
+        get_error_class = lambda: TypeError
 
-    try:
-        raise TypeError()
-    except get_error_class() as e:
-        print(e)
-    """
-    ```
+        try:
+            raise TypeError()
+        except get_error_class() as e:
+            print(e)
+        """
+        ```
 
 - Comprehension
 
     - `if` clauses in comprehensions are replaced by `where` clauses in Viper
 
-    ```py
-    odds = [i for i in range(10) where i % 2]
-    ```
+        ```py
+        odds = [i for i in range(10) where i % 2]
+        ```
 
 - Operators
 
-    - Viper's xor operator is '^' 
+    - Viper's xor operator is '^'
 
-    ```py
-    2 ^ 5 == 25
-    ```
+        ```py
+        2 ^ 5 == 25
+        ```
 
     - Viper's xor operator is '||'
 
-    ```py
-    0b101 || 0b011 == 0b001
-    ```
+        ```py
+        0b101 || 0b011 == 0b001
+        ```
 
 
 ## CODE GENERATION
@@ -862,6 +885,7 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
 ## POSSIBLE ADDITIONS
 
 - Character
+
     ```py
     ch0 = `a
     ch1 = `\n
@@ -875,11 +899,13 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
     ```
 
 - Regex literal
+
     ```js
     regex = /\d+/
     ```
 
 - Type annotation revamp
+
     ```py
     # Type anotation
     index: int = 9
@@ -922,11 +948,13 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
     ```
 
 - Type alias
+
     ```py
     typealias IdentityFunc{T}: (T) -> T
     ```
 
 - None handling
+
     ```py
     def get_optional() -> char?:
 
@@ -947,6 +975,7 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
     ```
 
 - Algebraic data types
+
     ```py
     enum Option{T}:
         Ok(value: T)
@@ -964,16 +993,19 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
     ```
 
 - Additional reserved keywords
+
     ```py
     const, ref, ptr, val, match, let, var, enum, true, false, interface, where, macro, typealias
     ```
 
-- Consistent use of underscores
+- Consistent use of underscores.
+
     ```py
     dictionary.from_keys('a, b, c')
     ```
 
 - UFCS
+
     ```py
     ls = [1, 2, 3, 4]
     len(ls)
@@ -981,6 +1013,7 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
     ```
 
 - Multiline lambda
+
     ```py
     map(
     lambda x:
@@ -1001,6 +1034,7 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
     ```
 
 - `const` keyword
+
     ```py
     const pi = 3.141
 
@@ -1012,6 +1046,7 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
     ```
 
 - New versions of certain functions and objects by default
+
     ```py
     map, sum,
 
@@ -1019,12 +1054,14 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
     ```
 
 - Explicit reference
+
     ```rust
     num2 = ref num
     num3 = num2
     ```
 
 - Pointers
+
     ```nim
     num2 = ptr num
     num2 += 1
@@ -1038,13 +1075,15 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
     ```
 
 - Introducing more primitive types
+
     ```py
     u8, u16, u32, u64, usize
     i8, i16, i32, i64, isize
     f32, f64
     ```
 
-- Pattern matching
+- Pattern matching.
+
     ```py
     match x:
         Person(name, age) : 1
@@ -1058,6 +1097,7 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
     ```
 
 - Partial application
+
     ```py
     add2 = add(2, _)
     add10 = add(_, 10)
@@ -1065,6 +1105,7 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
 
 
 - Cast function
+
     ```py
     animals = [Cat(), Dog()]
 
@@ -1078,6 +1119,7 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
     ```
 
 - Overloading functions and methods based on arity and types
+
     ```py
     @decorator
     def debug(f: function):
@@ -1119,6 +1161,7 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
 
 
 - Coefficient expression [WIP]
+
     ```py
     n = 4
     2n
@@ -1127,6 +1170,7 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
     ```
 
 - Abritary precision integer and float literal
+
     ```py
     integer = b`123457890123456789012345678901234567890
     floating: BigFloat = b`123457890123456.789012345678901234e-567890
@@ -1135,6 +1179,7 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
     ```
 
 - Hexadecimal, binary and octal floating point literal
+
     ```py
     decf = 12.3e+1
     hexf = 0x1f.3p+1
@@ -1143,12 +1188,14 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
     ```
 
 - Vectorization
+
     ```py
     apply.(array, double)
     C = A .* B
     ```
 
 - More operators
+
     ```py
     class Num:
         # ...
@@ -1169,6 +1216,7 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
     ```
 
 - Range syntax
+
     ```py
     range1 = (0:11) # Range object
     range2 = (0:2:11) # Range object
@@ -1176,8 +1224,8 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
     arr2 = [0:2:10] # List object
     ```
 
-
 - Where clause [WIP]
+
     ```py
     for i in (1:20) where i % 2:
         print(i)
@@ -1229,17 +1277,20 @@ In Swift, variables are deallocated in their declaration stack frames or parents
     child.parent = parent
 
     """
-    DEALLOCATION POINT
-
     Parent_0 = 2
     Child_0 = 2
 
-    Parent_0 decrements .child refs to 1
-    Child_0 decrements .parent refs to 1
+    DEALLOCATION POINT
+    ==================
+
+    > Parent_0 decrements .child refs to 1
+    Parent_0 = 1
+
+    > Child_0 decrements .parent refs to 1
+    Child_0 = 1
 
     problem:
     - both are still not destroyed
-    - avalanche of children refs decrement
     """
 
     print('Hello!')
@@ -1249,7 +1300,7 @@ In Swift, variables are deallocated in their declaration stack frames or parents
 
 - Static Reference Tracking (SRT)
 
-    SRT is a garbage collection technique that tracks objects' lifetimes at compile-time.
+    SRT is a deallocation technique that tracks objects' lifetimes at compile-time and can break reference cycles.
 
     - Non-concurrent programs
 
@@ -1264,13 +1315,13 @@ In Swift, variables are deallocated in their declaration stack frames or parents
 
         """
         Parent_0 [ &parent ]
-        child [ &child ]
+        Child_0 [ &child ]
         """
 
         parent.child = child
 
         """
-        Parent_0 [ &parent, ]
+        Parent_0 [ &parent ]
         Child_0 [ &child, &parent ]
         """
 
@@ -1279,16 +1330,24 @@ In Swift, variables are deallocated in their declaration stack frames or parents
         """
         Parent_0 [ &parent, &child ]
         Child_0 [ &child, &parent ]
-        """
 
-        """
-        DEALLOCATION
+        DEALLOCATION POINT
+        ==================
 
-        end of reference parent (*parent = null)
-        end of reference child (*child = null)
+        > unrefer parent (*parent = null)
 
-        deallocate Parent_0 []
-        deallocate Child_0 []
+        Parent_0 [ null, &child ]
+        Child_0 [ &child, null ]
+
+        > unrefer child (*child = null)
+
+        Parent_0 [ null, null ]
+        Child_0 [ null, null ]
+
+        > deallocate objects with only null references
+
+        problem:
+        - uses more memory than ARC
         """
 
         print('Hello!')
@@ -1296,7 +1355,7 @@ In Swift, variables are deallocated in their declaration stack frames or parents
 
     - Concurrent programs
 
-        Ordinary SRT is not well-suited for non-concurrent programs because there is no statically-known order to how threads execute.
+        Ordinary SRT is not well-suited for concurrent programs because there is no statically known order to how threads execute.
 
         ```py
         async def foo(parent, child):
@@ -1347,6 +1406,8 @@ In Swift, variables are deallocated in their declaration stack frames or parents
         because they are referenced in the `foo` coroutines. Here we have to maintain a fork count to track the object's lifetime associated with each coroutine that referenced it.
 
 
+    #### NOTES ON STATIC REFERENCE TRACKING
+
     **Creating statically-unknown number of objects dynamically**
 
     Creating statically-unknown number of objects dynamically isn't an issue for SRT because objects are bound to statically-known names at compile-time. With the exception of temporary objects whose lifetimes are well-defined and statically determinable.
@@ -1362,7 +1423,7 @@ In Swift, variables are deallocated in their declaration stack frames or parents
 
     **Pointer aliasing**
 
-    Raw pointer aliasing affects all GC techniques. SRT, Tracing GCs, ARC. That is why we have references. They are an abstraction over pointers, something our GCs understand. Raw pointer misuse is a problem for any GC technique.
+    Raw pointer aliasing affects all dellocation techniques. SRT, Tracing GCs, ARC, ownership semantics, etc. That is why we have references. They are an abstraction over pointers, something our GCs understand. Raw pointer misuse is a problem for any GC technique.
 
     **Reference into a list**
 
@@ -1374,5 +1435,32 @@ In Swift, variables are deallocated in their declaration stack frames or parents
     fourth = scores[3]
 
     some = scores[3:7]
+    ```
+
+    **Conditional deallocation**
+
+    In a situation where the compiler cannot statically determine precisely the deallocation point of an object, probably due to runtime conditions, the compiler will choose the farthest deallocation point considering every possible condition branch.
+
+    ```py
+    def foo():
+        string = "Hello"
+
+        if some_runtime_condition:
+            return "Hi"
+        else:
+            return string
+
+    greeting = foo()
+    print(greeting)
+    print(greeting)
+
+    """
+    DEALLOCATION POINT
+    ==================
+
+    > deallocate string
+
+    Dealloction of string will be at the top-level. Because it is the farthest deallocation point of all condition branches.
+    """
     ```
 
