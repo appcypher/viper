@@ -19,6 +19,10 @@ from .ast import (
     Operator,
     UnaryExpr,
     BinaryExpr,
+    IfExpr,
+    FuncParam,
+    FuncParams,
+    LambdaExpr,
 )
 
 
@@ -462,26 +466,26 @@ class Parser:
         rule = '√'? atom_expr ('^' unary_expr | '²')? [right associative]
         """
 
-        root = self.consume_string('√')
-        result = self.parse_integer()
+        root = self.consume_string("√")
+        result = self.parse_integer()  # TODO
 
         if result is None:
             return None
 
-        power = self.consume_string('^')
-        integer2 = self.parse_integer()
+        power = self.consume_string("^")
+        integer2 = self.parse_integer()  # TODO
 
         if power is not None or integer2 is not None:
             result = BinaryExpr(result, Operator(power), integer2)
         else:
-            square = self.consume_string('²')
+            square = self.consume_string("²")
             if square is not None:
                 result = UnaryExpr(result, Operator(square))
 
         if root is not None:
             result = UnaryExpr(result, Operator(root))
 
-        print(f'\n>>>> {result}')
+        print(f"\n>>>> {result}")
 
         return result
 
@@ -493,11 +497,11 @@ class Parser:
         """
         unary_ops = []
         while True:
-            unary_op = self.consume_string('+')
+            unary_op = self.consume_string("+")
             if unary_op is None:
-                unary_op = self.consume_string('-')
+                unary_op = self.consume_string("-")
                 if unary_op is None:
-                    unary_op = self.consume_string('~')
+                    unary_op = self.consume_string("~")
                     if unary_op is None:
                         break
             unary_ops.append(Operator(unary_op))
@@ -510,7 +514,44 @@ class Parser:
         for unary_op in reversed(unary_ops):
             result = UnaryExpr(result, unary_op)
 
-        print(f'\n>>>> {result}')
+        print(f"\n>>>> {result}")
+
+        return result
+
+    def parse_binary_expr(self, operand_parser, operators):
+        """
+        Helper function for parsing left-associative binary expressions.
+        NOTE:
+            Not bactrackable because it is called once by backtrackable functions
+        """
+        result = operand_parser()
+
+        while True:
+            operator = None
+            second_token = None
+
+            for i in operators:
+                if type(i) == tuple:
+                    operator = self.consume_string(i[0])
+                    second_token = self.consume_string(i[1])
+                    if operator is None or second_token is None:
+                        break
+                else:
+                    operator = self.consume_string(i)
+                    if operator is not None:
+                        break
+
+            if operator is None:
+                break
+
+            rhs = operand_parser()
+
+            if rhs is None:
+                break
+
+            result = BinaryExpr(result, Operator(operator, second_token), rhs)
+
+        print(f"\n>>>> {result}")
 
         return result
 
@@ -520,27 +561,268 @@ class Parser:
         """
         rule = unary_expr (('*' | '@' | '/' | '%' | '//') unary_expr)* [left associative]
         """
-        result = self.parse_unary_expr()
-        while True:
-            mul_op = self.consume_string('*')
-            if mul_op is None:
-                mul_op = self.consume_string('@')
-                if mul_op is None:
-                    mul_op = self.consume_string('/')
-                    if mul_op is None:
-                        mul_op = self.consume_string('%')
-                        if mul_op is None:
-                            mul_op = self.consume_string('//')
-                            if mul_op is None:
-                                break
-            unary_expr = self.parse_unary_expr()
 
-            if unary_expr is None:
+        return self.parse_binary_expr(self.parse_unary_expr, ["*", "@", "/", "%", "//"])
+
+    @backtrackable
+    @memoize
+    def parse_sum_expr(self):
+        """
+        rule = mul_expr (('+' | '-') mul_expr)* [left associative]
+        """
+
+        return self.parse_binary_expr(self.parse_mul_expr, ["+", "-"])
+
+    @backtrackable
+    @memoize
+    def parse_shift_expr(self):
+        """
+        rule = sum_expr (('<<' | '>>') sum_expr)* [left associative]
+        """
+
+        return self.parse_binary_expr(self.parse_sum_expr, ["<<", ">>"])
+
+    @backtrackable
+    @memoize
+    def parse_and_expr(self):
+        """
+        rule = shift_expr ('&' shift_expr)* [left associative]
+        """
+
+        return self.parse_binary_expr(self.parse_shift_expr, ["&"])
+
+    @backtrackable
+    @memoize
+    def parse_xor_expr(self):
+        """
+        rule = and_expr ('||' and_expr)* [left associative]
+        """
+
+        return self.parse_binary_expr(self.parse_and_expr, ["||"])
+
+    @backtrackable
+    @memoize
+    def parse_or_expr(self):
+        """
+        rule = xor_expr ('|' xor_expr)* [left associative]
+        """
+
+        return self.parse_binary_expr(self.parse_xor_expr, ["|"])
+
+    @backtrackable
+    @memoize
+    def parse_comparison_expr(self):
+        """
+        comparison_op =
+            | '<' | '>' | '==' | '>=' | '<=' | '!=' | 'in' | 'not' 'in' | 'is' | 'is' 'not'
+
+        rule = or_expr (comparison_op or_expr)* [left associative]
+        """
+
+        return self.parse_binary_expr(
+            self.parse_or_expr,
+            [
+                "<",
+                ">",
+                "==",
+                ">=",
+                "<=",
+                "!=",
+                "in",
+                ("not", "in"),
+                "is",
+                ("is", "not"),
+            ],
+        )
+
+    @backtrackable
+    @memoize
+    def parse_not_test(self):
+        """
+        rule = 'not'* comparison_expr [left associative]
+        """
+
+        result = self.parse_comparison_expr()
+
+        while True:
+            not_op = self.consume_string("not")
+            if not_op is None:
                 break
 
-            result = BinaryExpr(result, Operator(mul_op), unary_expr)
+            result = UnaryExpr(result, Operator(not_op))
 
-        print(f'\n>>>> {result}')
+        print(f"\n>>>> {result}")
 
         return result
 
+    @backtrackable
+    @memoize
+    def parse_and_test(self):
+        """
+        rule = not_test ('and' not_test)* [left associative]
+        """
+
+        return self.parse_binary_expr(self.parse_not_test, ["and"])
+
+    @backtrackable
+    @memoize
+    def parse_or_test(self):
+        """
+        rule = and_test ('or' and_test)* [left associative]
+        """
+
+        return self.parse_binary_expr(self.parse_and_expr, ["or"])
+
+    @backtrackable
+    @memoize
+    def parse_test(self):
+        """
+        rule = or_test ('if' expr 'else' expr)? [left associative]
+        """
+
+        result = self.parse_or_test()
+
+        if_ = self.consume_string("if")
+        or_test = self.parse_or_test()  # TODO
+        else_ = self.consume_string("else")
+        or_test2 = self.parse_or_test()  # TODO
+
+        if (
+            (if_ is not None)
+            and (or_test is not None)
+            and (else_ is not None)
+            and (or_test2 is not None)
+        ):
+            result = IfExpr(result, or_test, or_test2)
+
+        print(f"\n>>>> {result}")
+
+        return result
+
+    @backtrackable
+    @memoize
+    def parse_lambda_param(self):
+        """
+        rule = identifier ('=' expr)?
+        """
+
+        identifier = self.parse_identifier()
+
+        if identifier is None:
+            return None
+
+        result = FuncParam(identifier)
+
+        assignment_op = self.consume_string("=")
+        test = self.parse_test()  # TODO
+
+        if assignment_op is not None and test is not None:
+            result.default_value_expr = test
+
+        return result
+
+    @backtrackable
+    @memoize
+    def parse_lambda_params(self):
+        """
+        rule =
+            | '(' func_params? ')'
+            | lambda_param (',' lambda_param)* (',' '*' lambda_param (',' lambda_param)*)?
+                (',' '**' lambda_param)? ','?
+            | '*' lambda_param (',' lambda_param)* (',' '**' lambda_param)? ','?
+            | '**' lambda_param ','?
+        """
+
+        # FIRST ALTERNATIVE
+        open_brackets = self.consume_string("(")
+        func_params = self.parse_lambda_params()  # TODO
+        close_brackets = self.consume_string(")")
+
+        if (
+            (open_brackets is not None)
+            and (func_params is not None)
+            and (close_brackets is not None)
+        ):
+            return func_params
+
+        # SECOND ALTERNATIVE
+        params = [self.parse_lambda_param()]
+        while True:
+            comma = self.consume_string(",")
+            param = self.parse_lambda_param()
+
+            if comma is not None and param is not None:
+                params.append(param)
+            else:
+                break
+
+        tuple_rest_param = None
+        comma = self.consume_string(",")
+        star = self.consume_string("*")
+        param = self.parse_lambda_param()
+
+        if comma is not None and star is not None and param is not None:
+            tuple_rest_param = param
+
+        named_tuple_params = []
+        if tuple_rest_param:
+            while True:
+                comma = self.consume_string(",")
+                param = self.parse_lambda_param()
+
+                if comma is not None and param is not None:
+                    named_tuple_params.append(param)
+                else:
+                    break
+
+        named_tuple_rest_param = None
+        comma = self.consume_string(",")
+        star = self.consume_string("**")
+        param = self.parse_lambda_param()
+
+        if comma is not None and star is not None and param is not None:
+            named_tuple_rest_param = param
+
+        if params is not None:
+            return FuncParams(
+                params, tuple_rest_param, named_tuple_params, named_tuple_rest_param
+            )
+
+        # THIRD ALTERNATIVE
+        tuple_star = self.consume_string("*")
+        tuple_rest_param = self.parse_lambda_param()
+
+        named_tuple_params = []
+        if tuple_rest_param:
+            while True:
+                comma = self.consume_string(",")
+                param = self.parse_lambda_param()
+
+                if comma is not None and param is not None:
+                    named_tuple_params.append(param)
+                else:
+                    break
+
+        named_tuple_rest_param = None
+        comma = self.consume_string(",")
+        star = self.consume_string("**")
+        param = self.parse_lambda_param()
+
+        if comma is not None and star is not None and param is not None:
+            named_tuple_rest_param = param
+
+        if tuple_star is not None and tuple_rest_param is not None:
+            return FuncParams(
+                None, tuple_rest_param, named_tuple_params, named_tuple_rest_param
+            )
+
+        # FOURTH ALTERNATIVE
+        star = self.consume_string("**")
+        named_tuple_rest_param = self.parse_lambda_param()
+
+        if star is not None and named_tuple_rest_param is not None:
+            return FuncParams(
+                None, None, None, named_tuple_rest_param
+            )
+
+        return None

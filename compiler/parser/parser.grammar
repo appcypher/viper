@@ -84,14 +84,14 @@ or_test =
 
 test =
     | or_test ('if' expr 'else' expr)?
-------------------------------------------------------------------
+
 lambda_param =
-    | name ('=' expr)?
+    | identifier ('=' expr)?
 
 lambda_params =
     | '(' func_params? ')'
-    | lambda_param (',' lambda_param)* (',' '*' lambda_param)? (',' '**' lambda_param)? ','?
-    | '*' lambda_param (',' '**' lambda_param)? ','?
+    | lambda_param (',' lambda_param)* (',' '*' lambda_param (',' lambda_param)*)? (',' '**' lambda_param)? ','?
+    | '*' lambda_param (',' lambda_param)* (',' '**' lambda_param)? ','?
     | '**' lambda_param ','?
 
 lambda_expr_def =
@@ -175,6 +175,8 @@ atom =
     | 'None'
     | 'True'
     | 'False'
+
+------------------------------------------------------------------
 
 identifiers =
     | identifier (',' identifier)* ','?

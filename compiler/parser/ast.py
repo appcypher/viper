@@ -9,6 +9,7 @@ class BinaryOpKind(Enum):
     """
     The different kinds of binary operators
     """
+
     POWER = 0
     MUL = 1
     MATMUL = 2
@@ -34,52 +35,52 @@ class BinaryOpKind(Enum):
     IS_NOT = 22
 
     @staticmethod
-    def from_string(op):
-        if op == '^':
+    def from_string(op, second_token=None):
+        if op == "^":
             return BinaryOpKind.POWER
-        elif op == '*':
+        elif op == "*":
             return BinaryOpKind.MUL
-        elif op == '@':
+        elif op == "@":
             return BinaryOpKind.MATMUL
-        elif op == '/':
+        elif op == "/":
             return BinaryOpKind.DIV
-        elif op == '%':
+        elif op == "%":
             return BinaryOpKind.MOD
-        elif op == '//':
+        elif op == "//":
             return BinaryOpKind.INTEGER_DIV
-        elif op == '+':
+        elif op == "+":
             return BinaryOpKind.PLUS
-        elif op == '_':
+        elif op == "_":
             return BinaryOpKind.MINUS
-        elif op == '<<':
+        elif op == "<<":
             return BinaryOpKind.SHIFT_LEFT
-        elif op == '>>':
+        elif op == ">>":
             return BinaryOpKind.SHIFT_RIGHT
-        elif op == '&':
+        elif op == "&":
             return BinaryOpKind.BINARY_AND
-        elif op == '||':
+        elif op == "||":
             return BinaryOpKind.BINARY_XOR
-        elif op == '|':
+        elif op == "|":
             return BinaryOpKind.BINARY_OR
-        elif op == '<':
+        elif op == "<":
             return BinaryOpKind.LESSER_THAN
-        elif op == '>':
+        elif op == ">":
             return BinaryOpKind.GREATER_THAN
-        elif op == '==':
+        elif op == "==":
             return BinaryOpKind.EQUAL
-        elif op == '>=':
+        elif op == ">=":
             return BinaryOpKind.EQUAL_LESSER_THAN
-        elif op == '<=':
+        elif op == "<=":
             return BinaryOpKind.EQUAL_GREATER_THAN
-        elif op == '!=':
+        elif op == "!=":
             return BinaryOpKind.NOT_EQUAL
-        elif op == 'in':
+        elif op == "in":
             return BinaryOpKind.IN
-        elif op == 'notin':
+        elif op == "not" and second_token == "in":
             return BinaryOpKind.NOT_IN
-        elif op == 'is':
+        elif op == "is":
             return BinaryOpKind.IS
-        elif op == 'isnot':
+        elif op == "is" and second_token == "not":
             return BinaryOpKind.IS_NOT
         else:
             return None
@@ -89,6 +90,7 @@ class UnaryOpKind(Enum):
     """
     The different kinds of unary operators
     """
+
     PLUS = 0
     MINUS = 1
     BINARY_NOT = 2
@@ -98,17 +100,17 @@ class UnaryOpKind(Enum):
 
     @staticmethod
     def from_string(op):
-        if op == '+':
+        if op == "+":
             return UnaryOpKind.PLUS
-        elif op == '-':
+        elif op == "-":
             return UnaryOpKind.MINUS
-        elif op == '~':
+        elif op == "~":
             return UnaryOpKind.BINARY_NOT
-        elif op == 'not':
+        elif op == "not":
             return UnaryOpKind.NOT
-        elif op == '²':
+        elif op == "²":
             return UnaryOpKind.SQUARE
-        elif op == '√':
+        elif op == "√":
             return UnaryOpKind.ROOT
         else:
             return None
@@ -123,7 +125,7 @@ class AST:
     """
 
     def __repr__(self):
-        return f'{type(self).__name__}{str(vars(self))}'
+        return f"{type(self).__name__}{str(vars(self))}"
 
     def __eq__(self, other):
         return vars(self) == vars(other)
@@ -185,8 +187,9 @@ class PrefixedString(AST):
 
 
 class Operator(AST):
-    def __init__(self, op):
+    def __init__(self, op, second_token=None):
         self.op = op
+        self.second_token = second_token
 
 
 class UnaryExpr(AST):
@@ -200,6 +203,38 @@ class BinaryExpr(AST):
         self.lhs = lhs
         self.op = op
         self.rhs = rhs
+
+
+class IfExpr(AST):
+    def __init__(self, if_expr, condition, else_expr):
+        self.if_expr = if_expr
+        self.condition = condition
+        self.else_expr = else_expr
+
+
+class FuncParam(AST):
+    def __init__(self, name, type=None, spread_type=None, default_value_expr=None):
+        self.name = name
+        self.type = type
+        self.spread_type = spread_type
+        self.default_value_expr = default_value_expr
+
+
+class FuncParams(AST):
+    def __init__(
+        self, params, tuple_rest_param, named_tuple_params, named_tuple_rest_param
+    ):
+        self.params = params
+        self.tuple_rest_param = tuple_rest_param
+        self.named_tuple_params = named_tuple_params
+        self.named_tuple_rest_param = named_tuple_rest_param
+
+
+class LambdaExpr(AST):
+    def __init__(self, name, params, body):
+        self.name = name
+        self.params = params
+        self.body = body
 
 
 class AtomExpr(AST):
