@@ -16,6 +16,8 @@ There are other similarly oriented projects, but they are all objectively differ
 
 MicroPython is a well-optimized Python interpreter (with some JIT support) while Nuitka compiles Python to C. These two projects still allow dynamic aspects of Python, which means their performances may suffer from those parts.
 
+Vyper (not to be mistaken for Viper) primarily targets Ethereum VM and not designed for general-purpose programming.
+
 Also unlike Nim, Boo and Cobra, Viper tries to stick to Python syntax and semantics as much as possible and wherever it makes sense.
 
 RPython is quite similar to this project, but the developers have [made it clear](https://rpython.readthedocs.io/en/latest/faq.html#do-i-have-to-rewrite-my-programs-in-rpython) that their goal is not to make RPython a standalone language.
