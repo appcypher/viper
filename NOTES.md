@@ -1244,6 +1244,19 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
     f = add(2, _)
     ```
 
+- Private members
+    ```py
+    @private
+    def foo():
+        pass
+
+    @private
+    class Person:
+        @private
+        def __init__(self, name, age):
+            self.name = name
+            self.age = age
+    ```
 
 
 ## GARBAGE COLLECTION
