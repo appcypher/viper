@@ -22,7 +22,10 @@ from .ast import (
     IfExpr,
     FuncParam,
     FuncParams,
-    LambdaExpr,
+    FuncExpr,
+    TupleRestExpr,
+    NamedTupleRestExpr,
+    ComprehensionFor,
 )
 
 
@@ -60,7 +63,7 @@ class Parser:
         self.cache = {}
 
     def __repr__(self):
-        return f"Parser(tokens={self.tokens})"
+        return f"{type(self).__name__}{vars(self)}"
 
     @staticmethod
     def from_code(code):
@@ -560,44 +563,46 @@ class Parser:
             return func_params
 
         # SECOND ALTERNATIVE
-        params = [self.parse_lambda_param()]
-        while True:
-            comma = self.consume_string(",")
-            param = self.parse_lambda_param()
-
-            if comma is not None and param is not None:
-                params.append(param)
-            else:
-                break
-
-        tuple_rest_param = None
-        comma = self.consume_string(",")
-        star = self.consume_string("*")
         param = self.parse_lambda_param()
 
-        if comma is not None and star is not None and param is not None:
-            tuple_rest_param = param
-
-        named_tuple_params = []
-        if tuple_rest_param:
+        if param is not None:
+            params = [param]
             while True:
                 comma = self.consume_string(",")
                 param = self.parse_lambda_param()
 
                 if comma is not None and param is not None:
-                    named_tuple_params.append(param)
+                    params.append(param)
                 else:
                     break
 
-        named_tuple_rest_param = None
-        comma = self.consume_string(",")
-        star = self.consume_string("**")
-        param = self.parse_lambda_param()
+            tuple_rest_param = None
+            comma = self.consume_string(",")
+            star = self.consume_string("*")
+            param = self.parse_lambda_param()
 
-        if comma is not None and star is not None and param is not None:
-            named_tuple_rest_param = param
+            if comma is not None and star is not None and param is not None:
+                tuple_rest_param = param
 
-        if params is not None:
+            named_tuple_params = []
+            if tuple_rest_param:
+                while True:
+                    comma = self.consume_string(",")
+                    param = self.parse_lambda_param()
+
+                    if comma is not None and param is not None:
+                        named_tuple_params.append(param)
+                    else:
+                        break
+
+            named_tuple_rest_param = None
+            comma = self.consume_string(",")
+            star = self.consume_string("**")
+            param = self.parse_lambda_param()
+
+            if comma is not None and star is not None and param is not None:
+                named_tuple_rest_param = param
+
             return FuncParams(
                 params, tuple_rest_param, named_tuple_params, named_tuple_rest_param
             )
@@ -606,26 +611,26 @@ class Parser:
         tuple_star = self.consume_string("*")
         tuple_rest_param = self.parse_lambda_param()
 
-        named_tuple_params = []
-        if tuple_rest_param:
-            while True:
-                comma = self.consume_string(",")
-                param = self.parse_lambda_param()
-
-                if comma is not None and param is not None:
-                    named_tuple_params.append(param)
-                else:
-                    break
-
-        named_tuple_rest_param = None
-        comma = self.consume_string(",")
-        star = self.consume_string("**")
-        param = self.parse_lambda_param()
-
-        if comma is not None and star is not None and param is not None:
-            named_tuple_rest_param = param
-
         if tuple_star is not None and tuple_rest_param is not None:
+            named_tuple_params = []
+            if tuple_rest_param:
+                while True:
+                    comma = self.consume_string(",")
+                    param = self.parse_lambda_param()
+
+                    if comma is not None and param is not None:
+                        named_tuple_params.append(param)
+                    else:
+                        break
+
+            named_tuple_rest_param = None
+            comma = self.consume_string(",")
+            star = self.consume_string("**")
+            param = self.parse_lambda_param()
+
+            if comma is not None and star is not None and param is not None:
+                named_tuple_rest_param = param
+
             return FuncParams(
                 None, tuple_rest_param, named_tuple_params, named_tuple_rest_param
             )
@@ -635,8 +640,358 @@ class Parser:
         named_tuple_rest_param = self.parse_lambda_param()
 
         if star is not None and named_tuple_rest_param is not None:
-            return FuncParams(
-                None, None, None, named_tuple_rest_param
-            )
+            return FuncParams(None, None, None, named_tuple_rest_param)
 
         return None
+
+    @backtrackable
+    @memoize
+    def parse_lambda_expr_def(self):
+        """
+        rule = 'lambda' lambda_params? ':' expr
+        """
+        result = None
+
+        lambda_token = self.consume_string("lambda")
+        lambda_params = self.parse_lambda_params()
+        colon = self.consume_string(":")
+        test = self.parse_test()  # TODO
+
+        if lambda_token is not None and colon is not None and test is not None:
+            result = FuncExpr(None, lambda_params, [test])
+
+        return result
+
+    @backtrackable
+    @memoize
+    def parse_expr(self):
+        """
+        rule = test | lambda_expr_def
+        """
+        result = self.parse_test()
+        if result is None:
+            result = self.parse_lambda_expr_def()
+            if result is None:
+                result = None
+
+        return result
+
+    @backtrackable
+    @memoize
+    def parse_exprs(self):
+        """
+        rule = expr (',' expr)* ','?
+        """
+        result = self.parse_expr()
+
+        if result is None:
+            return None
+
+        result = [result]
+
+        while True:
+            comma = self.consume_string(",")
+            expr = self.parse_expr()
+
+            if comma is not None and expr is not None:
+                result.append(expr)
+
+        self.consume_string(",")
+
+        return result
+
+    @backtrackable
+    @memoize
+    def parse_rest_expr(self):
+        """
+        rule = ('*' | '**')? expr
+        """
+        is_tuple_rest = True
+
+        rest = self.consume_string("*")
+        if rest is None:
+            rest = self.consume_string("**")
+            if rest is not None:
+                is_tuple_rest = False
+
+        result = self.parse_expr()
+        if result is None:
+            return None
+
+        if rest is not None:
+            if is_tuple_rest:
+                result = TupleRestExpr(result)
+            else:
+                result = NamedTupleRestExpr(result)
+
+        return result
+
+    @backtrackable
+    @memoize
+    def parse_rest_exprs(self):
+        """
+        rule = rest_expr (',' rest_expr)* ','?
+        """
+        result = self.parse_rest_expr()
+
+        if result is None:
+            return None
+
+        result = [result]
+
+        while True:
+            comma = self.consume_string(",")
+            rest_expr = self.parse_rest_expr()
+
+            if comma is not None and rest_expr is not None:
+                result.append(rest_expr)
+
+        self.consume_string(",")
+
+        return result
+
+    @backtrackable
+    @memoize
+    def parse_lambda_block_def(self):
+        """
+        rule = 'lambda' lambda_params? ':' indent statement+ dedent
+        """
+        result = None
+
+        lambda_token = self.consume_string("lambda")
+        lambda_params = self.parse_lambda_params()
+        colon = self.consume_string(":")
+        indent = self.parse_indent()
+
+        exprs = []
+        while True:
+            expr = self.parse_expr()  # TODO
+            if expr is not None:
+                exprs.append(expr)
+
+        dedent = self.parse_dedent()
+
+        if (
+            lambda_token is not None
+            and colon is not None
+            and indent is not None
+            and exprs
+            and dedent is not None
+        ):
+            result = FuncExpr(None, lambda_params, exprs)
+
+        return result
+
+    @backtrackable
+    @memoize
+    def parse_indentable_expr(self):
+        """
+        rule =
+            | expr
+            | lambda_block_def
+        """
+        result = self.parse_expr()
+        if result is None:
+            result = self.parse_lambda_block_def()
+
+        return result
+
+    @backtrackable
+    @memoize
+    def parse_indentable_exprs(self):
+        """
+        rule = indentable_expr (',' indentable_expr)* ','?
+        """
+        result = self.parse_indentable_expr()
+
+        if result is None:
+            return None
+
+        result = [result]
+
+        while True:
+            comma = self.consume_string(",")
+            indentable_expr = self.parse_indentable_expr()
+
+            if comma is not None and indentable_expr is not None:
+                result.append(indentable_expr)
+
+        self.consume_string(",")
+
+    @backtrackable
+    @memoize
+    def parse_rest_indentable_expr(self):
+        """
+        rule = ('*' | '**')? indentable_expr
+        """
+        is_tuple_rest = True
+
+        rest = self.consume_string("*")
+        if rest is None:
+            rest = self.consume_string("**")
+            if rest is not None:
+                is_tuple_rest = False
+
+        result = self.parse_indentable_expr()
+        if result is None:
+            return None
+
+        if rest is not None:
+            if is_tuple_rest:
+                result = TupleRestExpr(result)
+            else:
+                result = NamedTupleRestExpr(result)
+
+        return result
+
+    @backtrackable
+    @memoize
+    def parse_rest_indentable_exprs(self):
+        """
+        rule = rest_indentable_expr (',' rest_indentable_expr)* ','?
+        """
+        result = self.parse_rest_indentable_expr()
+
+        if result is None:
+            return None
+
+        result = [result]
+
+        while True:
+            comma = self.consume_string(",")
+            rest_expr = self.parse_rest_indentable_expr()
+
+            if comma is not None and rest_expr is not None:
+                result.append(rest_expr)
+
+        self.consume_string(",")
+
+        return result
+
+    @backtrackable
+    @memoize
+    def parse_sync_comprehension_for(self):
+        """
+        rule = 'for' lhs 'in' indentable_expr
+        """
+        result = None
+
+        for_ = self.consume_string("for")
+        identifier = self.parse_identifier()  # TODO
+        in_ = self.consume_string("in")
+        indentable_expr = self.parse_indentable_expr()
+
+        if (
+            for_ is not None
+            and identifier is not None
+            and in_ is not None
+            and indentable_expr is not None
+        ):
+            result = ComprehensionFor(identifier, indentable_expr, [])
+
+        return result
+
+    @backtrackable
+    @memoize
+    def parse_comprehension_where(self):
+        """
+        rule = 'where' indentable_exprs
+        """
+        result = None
+
+        where_ = self.consume_string("where")
+        indentable_expr = self.parse_indentable_expr()
+
+        if (
+            where_ is not None
+            and indentable_expr is not None
+        ):
+            result = indentable_expr
+
+        return result
+
+    @backtrackable
+    @memoize
+    def parse_comprehension_for(self):
+        """
+        rule = 'async'? sync_comprehension_for
+        """
+        async_ = bool(self.consume_string("async"))
+        result = self.parse_sync_comprehension_for()
+
+        if result is None:
+            return None
+
+        result.is_async = async_
+
+        return result
+
+    @backtrackable
+    @memoize
+    def parse_comprehension_iter(self):
+        """
+        rule =
+            | comprehension_for
+            | comprehension_where
+        """
+        result = self.parse_comprehension_for()
+        if result is None:
+            result = self.parse_comprehension_where()
+
+        return result
+
+    @backtrackable
+    @memoize
+    def parse_indentable_exprs_or_comprehension(self):
+        """
+        rule =
+            | rest_indentable_expr comprehension_for comprehension_iter*
+            | rest_indentable_expr (',' rest_indentable_expr)* ','?
+        """
+        # FIRST ALTERNATIVE
+        rest_indentable_expr = self.parse_rest_indentable_expr()
+        comprehension_for = self.parse_comprehension_for()
+
+        if rest_indentable_expr is not None and comprehension_for is not None:
+            comprehension_fors = [comprehension_for]
+
+            while True:
+                comprehension_iter = self.parse_comprehension_iter()
+                if comprehension_iter is None:
+                    break
+                if type(comprehension_iter) == ComprehensionFor:
+                    comprehension_fors.append(comprehension_iter)
+                else:
+                    comprehension_fors[-1].where_exprs.append(comprehension_iter)
+
+            return comprehension_fors
+
+        # SECOND ALTERNATIVE
+        rest_indentable_expr = self.parse_rest_indentable_expr()
+
+        if rest_indentable_expr is not None:
+            rest_indentable_exprs = [rest_indentable_expr]
+
+            while True:
+                comma = self.consume_string(",")
+                rest_expr = self.parse_rest_indentable_expr()
+
+                if comma is not None and rest_expr is not None:
+                    rest_indentable_exprs.append(rest_expr)
+
+            self.consume_string(",")
+
+            return rest_indentable_exprs
+
+        return None
+
+    @backtrackable
+    @memoize
+    def yield_argument():
+        """
+        rule =
+            | 'from' indentable_expr
+            | indentable_exprs
+        """
+
+        pass

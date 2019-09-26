@@ -213,7 +213,7 @@ class IfExpr(AST):
 
 
 class FuncParam(AST):
-    def __init__(self, name, type=None, spread_type=None, default_value_expr=None):
+    def __init__(self, name, type, spread_type, default_value_expr):
         self.name = name
         self.type = type
         self.spread_type = spread_type
@@ -230,11 +230,36 @@ class FuncParams(AST):
         self.named_tuple_rest_param = named_tuple_rest_param
 
 
-class LambdaExpr(AST):
+class FuncExpr(AST):
     def __init__(self, name, params, body):
         self.name = name
         self.params = params
         self.body = body
+
+
+class TupleRestExpr(AST):
+    def __init__(self, expr):
+        self.expr = expr
+
+
+class NamedTupleRestExpr(AST):
+    def __init__(self, expr):
+        self.expr = expr
+
+
+class ComprehensionFor(AST):
+    def __init__(self, for_lhs, in_expr, where_exprs, is_async=False):
+        self.for_lhs = for_lhs
+        self.in_expr = in_expr
+        self.where_exprs = where_exprs
+        self.is_sync = is_async
+
+
+class Comprehension(AST):
+    def __init__(self, type, expr, comprehension_fors, comprehension_wheres):
+        self.type = type
+        self.expr = expr
+        self.comprehension_fors = comprehension_fors
 
 
 class AtomExpr(AST):
