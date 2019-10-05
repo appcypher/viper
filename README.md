@@ -76,7 +76,7 @@ RPython is quite similar to this project, but the developers have [made it clear
     ```
 
 ### LANGUAGE DESIGN
-Viper similar to Python in a lot of ways, but being a statically-typed language, it made some trade-offs to ensure predictable performance. In this respect, Viper is not compatible with Python.
+Viper is similar to Python in a lot of ways, but being a statically-typed language, it made some trade-offs to ensure predictable performance. In this respect, Viper is not compatible with Python.
 
 Viper has a similar but disambiguated type system with Python. Viper prioritizes a design that allows static analysis first but allows Python's level of flexibility if statically determinable. This is why type inference and structural typing are an important part of Viper.
 
