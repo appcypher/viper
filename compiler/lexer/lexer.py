@@ -12,8 +12,7 @@ NOTE:
     In addition to lex function becoming a generator, may also change Parser.code to an generator
     to be gotten on demand.
 
-    This has the benefit of not keeping everything in memory in case of lex / parse becomes
-    unsuccessful.
+    This has the benefit of not keeping everything in memory in case lexer / parser fails early
 
     1. https://medium.com/@gvanrossum_83706/building-a-peg-parser-d4869b5958fb#2a80
 

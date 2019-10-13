@@ -884,6 +884,17 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
 
 ## POSSIBLE ADDITIONS
 
+- Function declaration
+    ```py
+    def add(int, int) -> int
+    ```
+
+- Type alias
+
+    ```py
+    typealias IdentityFunc{T} = (T) -> T
+    ```
+
 - Character
 
     ```py
@@ -945,12 +956,6 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
         return Person{T}(name)
 
     jane = get_person{str}('Jane Doe')
-    ```
-
-- Type alias
-
-    ```py
-    typealias IdentityFunc{T}: (T) -> T
     ```
 
 - None handling
@@ -1257,7 +1262,6 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
             self.name = name
             self.age = age
     ```
-
 
 ## GARBAGE COLLECTION
 In Swift, variables are deallocated in their declaration stack frames or parents of that. Never a child frame of the declaration scope. Viper takes a similar approach.
