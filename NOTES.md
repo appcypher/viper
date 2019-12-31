@@ -1263,6 +1263,7 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
             self.age = age
     ```
 
+
 ## GARBAGE COLLECTION
 In Swift, variables are deallocated in their declaration stack frames or parents of that. Never a child frame of the declaration scope. Viper takes a similar approach.
 

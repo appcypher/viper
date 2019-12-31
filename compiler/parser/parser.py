@@ -49,7 +49,7 @@ class Parser:
     """
     A recursive descent parser with memoizing feature basically making it a packrat parser.
 
-    It is designed to have the follwing properties:
+    It is designed to have the following properties:
     - Results of all paths taken are memoized.
     - A parser function result should not hold values, but references to token elements.
     """
