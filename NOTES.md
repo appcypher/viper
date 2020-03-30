@@ -415,12 +415,7 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
 
 - Main
 
-    - Viper does not have the special `__name__` variable. Instead, Viper runs any top-level function with the name 'main' automatically.
-
-        ```py
-        def main(args):
-            print(args)
-        ```
+    - Viper does not have the special `__name__` variable. Viper runs top-level expressions only.
 
 - Fields
 
@@ -515,19 +510,6 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
         """
         ```
 
-    - Functions that return nothing, don't return None implicitly.
-
-        ```py
-        def foo():
-            2 + 3
-
-        """
-        ERROR
-
-        print(foo()) # foo returns nothing
-        """
-        ```
-
 - Imports
 
     - Viper resolves imported modules at compile-time
@@ -558,7 +540,8 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
 
         class Person:
             specie = 'homo sapiens'
-
+            
+            @static_method
             def change_specie(cls):
                 cls.specie = 500
 
@@ -601,7 +584,7 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
         ```
 
         StopIteration is expected to be returned rather than raised.
-        In the case of generators, returning nothing marks the end of an iteration.
+        In the case of generators, returning None marks the end of an iteration.
 
         - Iterables
 
@@ -706,7 +689,7 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
         """
         ```
 
-    - Viper doesn't support the wide entire uppercase / reversed prefixes Python support in prefix strings.
+    - Viper doesn't support the uppercase / reversed prefixes Python support in prefix strings.
 
         ```py
         r"Hello"
@@ -771,8 +754,8 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
             5 + 500
             lambda x: x
             match x:
-                5 : 200
-                _ : 300
+                case 5: 200
+                case _: 300
             """
 
             def foo(self):
@@ -793,7 +776,7 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
             def __init__(self, name):
                 self.name = name
 
-            @classmethod
+            @class_method
             def from_tuple(Class, tup):
                 return Class(**tup)
 
@@ -802,7 +785,7 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
                 super().__init__(name)
                 self.age = age
 
-            @decorator @staticmethod
+            @decorator @static_method
             def debug(f):
                 def wrapper(self):
                     if 'debug' in @features:
@@ -814,9 +797,7 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
             def print(self):
                 return f"{type(self).__name__}{vars(self)}"
 
-        student = Student.from_tuple(
-            (name="Ajanaku", age=56)
-        )
+        student = Student.from_tuple((name="Ajanaku", age=56))
         ```
 
     - Also unlike Python, all non-static non-class methods are instance methods and cannot be referenced directly, only through `self` or whatever the first parameter is to the instance method.
@@ -863,13 +844,13 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
 
 - Operators
 
-    - Viper's xor operator is '^'
+    - Viper's exponentiation operator is '^'
 
         ```py
         2 ^ 5 == 25
         ```
 
-    - Viper's xor operator is '||'
+    - Viper's bitwise xor operator is '||'
 
         ```py
         0b101 || 0b011 == 0b001
@@ -945,7 +926,7 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
     Person == Person
 
     # Generics
-    class Person{T, U}(A, B) where (T, < Person:
+    class Person{T, U}(A, B) where T < Person:
         def __init__(self, name: T):
             self.name = name
 
@@ -1098,7 +1079,7 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
         # case { x: 'x', y: 'y',  **z}: x
         case 10 or 11 and 12: x
         case 0..89: 10
-        case _ : 11
+        case _: 11
     ```
 
 - Partial application
@@ -1228,6 +1209,11 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
     arr1 = [0:10] # List object
     arr2 = [0:2:10] # List object
     ```
+    
+    ```
+    for i in (1:20):
+        print('>>> ', i)
+    
 
 - Where clause [WIP]
 
