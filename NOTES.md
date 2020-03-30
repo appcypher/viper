@@ -990,9 +990,9 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
     identity: Option{str} = Option.None
 
     match identity:
-        Option.Some(value) : value
-        Option.Err() : raise Error()
-        _ : pass
+        case Option.Some(value): value
+        case Option.Err(): raise Error()
+        case _: pass
 
     identity: int | str = 'XNY7V40'
     ```
@@ -1091,14 +1091,14 @@ Unlike CPython's LL(1) parser, Viper uses a packrat parser and the language's gr
 
     ```py
     match x:
-        Person(name, age) : 1
-        [x, y = 5, z] : y # List
-        (x, y = 5, 10, *z) : x # Tuple and NamedTuple
-        {x, y = 5, 10, *z} : x # Set
-        # { x: 'x', y: 'y',  **z} = x
-        10 or 11 and 12 : x
-        0 .. 89 : 10
-        _ : 11
+        case Person(name, age): 1
+        case [x, y = 5, z]: y # List
+        case (x, y = 5, 10, *z): x # Tuple and NamedTuple
+        case {x, y = 5, 10, *z}: x # Set
+        # case { x: 'x', y: 'y',  **z}: x
+        case 10 or 11 and 12: x
+        case 0..89: 10
+        case _ : 11
     ```
 
 - Partial application
