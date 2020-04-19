@@ -1,3 +1,5 @@
+### Moved project into [Raccoon](https://github.com/appcypher/raccoon)
+
 <div align="center">
     <a href="#" target="_blank">
         <img src="https://image.flaticon.com/icons/svg/296/296589.svg" alt="Viper Logo" width="140" height="140"></img>
@@ -87,6 +89,3 @@ For more details, check [NOTES.md](NOTES.md)
 
 Attributions can be found [here](ATTRIBUTIONS.md)
 
-
-
-<sup><sup><sub><sub>[Viper](#README.md) is to [Python](https://github.com/python/cpython) what [Crystal](https://github.com/crystal-lang/crystal) is to [Ruby](https://github.com/ruby/ruby)<sub></sub></sup></sup>
